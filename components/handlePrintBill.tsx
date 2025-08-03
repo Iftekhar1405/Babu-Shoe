@@ -1,16 +1,7 @@
+import { DETAILS } from "@/public/details";
 import { BillItem } from "@/types";
 
-export const handlePrintBill = (billItems: BillItem[], companyInfo = {}) => {
-    // Default company information - replace with your actual data
-    const defaultCompanyInfo = {
-        name: "Babu Shoe Center",
-        address: "123 Business Street",
-        city: "Business City, State 12345",
-        phone: "(555) 123-4567",
-        email: "info@yourcompany.com",
-        taxId: "TAX-123456789",
-        ...companyInfo
-    };
+export const handlePrintBill = (billItems: BillItem[], defaultCompanyInfo = DETAILS.COMPANY_INFO) => {
 
     const billDate = new Date().toLocaleDateString();
     const billTime = new Date().toLocaleTimeString();

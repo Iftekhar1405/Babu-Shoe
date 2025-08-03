@@ -6,16 +6,17 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { 
-  Home, 
-  Package, 
-  Grid3X3, 
-  Settings, 
+import {
+  Home,
+  Package,
+  Grid3X3,
+  Settings,
   Menu,
   ShoppingBag,
   BarChart3,
   Users
 } from 'lucide-react';
+import { DETAILS } from '@/public/details'
 
 const navigation = [
   {
@@ -68,9 +69,9 @@ export function Sidebar({ className }: SidebarProps) {
       <div className="flex h-16 items-center border-b px-6">
         <Link href="/" className="flex items-center space-x-2">
           <div className="h-8 w-8 rounded-lg bg-black flex items-center justify-center">
-            <Package className="h-5 w-5 text-white" />
+            {DETAILS.ICON}
           </div>
-          <span className="text-xl font-bold">ECommerce</span>
+          <span className="text-xl font-bold">{DETAILS.NAME}</span>
         </Link>
       </div>
 

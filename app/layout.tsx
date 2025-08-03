@@ -2,12 +2,13 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Sidebar } from '@/components/Sidebar';
+import { DETAILS } from '@/public/details';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'ECommerce App',
-  description: 'Modern e-commerce application with Next.js and NestJS',
+  title: DETAILS.NAME,
+  description: DETAILS.DESCRIPTION,
 };
 
 export default function RootLayout({
