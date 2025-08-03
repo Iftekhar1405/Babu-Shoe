@@ -42,7 +42,7 @@ export function Header({
 
           {/* Search Bar - Hidden on mobile when collapsed */}
           <div className={`flex-1 max-w-md mx-4 ${showMobileSearch ? 'block' : 'hidden sm:block'}`}>
-            {showSearch && onSearch && (
+            {!showMobileSearch && showSearch && onSearch && (
               <SearchBar onSearch={onSearch} placeholder="Search products..." />
             )}
           </div>
