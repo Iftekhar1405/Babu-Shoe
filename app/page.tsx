@@ -10,11 +10,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, Grid3X3, ShoppingBag, TrendingUp } from 'lucide-react';
 import { Category, Product, BillItem } from '@/types';
 import { apiClient } from '@/lib/api';
+import { handlePrintBill } from '@/components/handlePrintBill';
 
 export default function Dashboard() {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product<true>[]>([]);
+  const [searchResults, setSearchResults] = useState<Product<true>[]>([]);
   const [billItems, setBillItems] = useState<BillItem[]>([]);
   const [isBillOpen, setIsBillOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,10 +62,10 @@ export default function Dashboard() {
         return prev.map(item =>
           item.product.id === product.id
             ? {
-                ...item,
-                quantity: item.quantity + 1,
-                finalPrice: product.price * (item.quantity + 1) * (1 - item.discount / 100)
-              }
+              ...item,
+              quantity: item.quantity + 1,
+              finalPrice: product.price * (item.quantity + 1) * (1 - item.discount / 100)
+            }
             : item
         );
       } else {
@@ -94,28 +95,7 @@ export default function Dashboard() {
     setBillItems([]);
   };
 
-  const handlePrintBill = () => {
-    const billContent = `
-      BILL SUMMARY
-      ============
-      
-      ${billItems.map(item => `
-      ${item.product.name}
-      Qty: ${item.quantity} x $${item.product.price.toFixed(2)}
-      Discount: ${item.discount}%
-      Final: $${item.finalPrice.toFixed(2)}
-      `).join('\n')}
-      
-      TOTAL: $${billItems.reduce((sum, item) => sum + item.finalPrice, 0).toFixed(2)}
-    `;
-    
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(`<pre>${billContent}</pre>`);
-      printWindow.print();
-      printWindow.close();
-    }
-  };
+
 
   if (isLoading) {
     return (
@@ -257,7 +237,7 @@ export default function Dashboard() {
         onUpdateItem={handleUpdateBillItem}
         onRemoveItem={handleRemoveBillItem}
         onClearBill={handleClearBill}
-        onPrintBill={handlePrintBill}
+        onPrintBill={() => handlePrintBill(billItems)}
       />
     </div>
   );

@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, ShoppingBag } from 'lucide-react';
 import { Category, Product, BillItem } from '@/types';
 import { apiClient } from '@/lib/api';
+import { handlePrintBill } from '@/components/handlePrintBill';
 
 export default function ProductsPage() {
   const searchParams = useSearchParams();
@@ -112,29 +113,6 @@ export default function ProductsPage() {
 
   const handleClearBill = () => {
     setBillItems([]);
-  };
-
-  const handlePrintBill = () => {
-    const billContent = `
-      BILL SUMMARY
-      ============
-      
-      ${billItems.map(item => `
-      ${item.product.name}
-      Qty: ${item.quantity} x $${item.product.price.toFixed(2)}
-      Discount: ${item.discount}%
-      Final: $${item.finalPrice.toFixed(2)}
-      `).join('\n')}
-      
-      TOTAL: $${billItems.reduce((sum, item) => sum + item.finalPrice, 0).toFixed(2)}
-    `;
-
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(`<pre>${billContent}</pre>`);
-      printWindow.print();
-      printWindow.close();
-    }
   };
 
   const getCategoryName = (id: string) => {
@@ -253,7 +231,7 @@ export default function ProductsPage() {
         onUpdateItem={handleUpdateBillItem}
         onRemoveItem={handleRemoveBillItem}
         onClearBill={handleClearBill}
-        onPrintBill={handlePrintBill}
+        onPrintBill={() => handlePrintBill(billItems)}
       />
     </div>
   );

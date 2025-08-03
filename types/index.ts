@@ -7,7 +7,7 @@ export interface Category {
   updatedAt?: string;
 }
 
-export interface Product<e extends boolean = false> {
+export interface Product<e extends boolean = true> {
   id: string;
   _id?: string;
   name: string;
