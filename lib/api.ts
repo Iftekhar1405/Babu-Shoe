@@ -5,7 +5,7 @@ const API_BASE_URL = 'http://localhost:3001/api';
 class ApiClient {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
     const url = `${API_BASE_URL}${endpoint}`;
-    
+
     try {
       const response = await fetch(url, {
         headers: {
@@ -46,13 +46,13 @@ class ApiClient {
   }
 
   // Products
-  async getProducts(categoryId?: string, search?: string): Promise<Product[]> {
+  async getProducts(categoryId?: string, search?: string): Promise<Product<true>[]> {
     const params = new URLSearchParams();
     if (categoryId) params.append('category', categoryId);
     if (search) params.append('search', search);
-    
+
     const endpoint = `/products${params.toString() ? `?${params.toString()}` : ''}`;
-    const response = await this.request<Product[]>(endpoint);
+    const response = await this.request<Product<true>[]>(endpoint);
     return response.data.map(prod => ({ ...prod, id: prod._id || prod.id }));
   }
 

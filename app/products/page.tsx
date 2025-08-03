@@ -17,8 +17,8 @@ export default function ProductsPage() {
   const categoryId = searchParams.get('category');
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product<true>[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product<true>[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryId || 'all');
   const [billItems, setBillItems] = useState<BillItem[]>([]);
   const [isBillOpen, setIsBillOpen] = useState(false);
@@ -59,7 +59,7 @@ export default function ProductsPage() {
 
     // Filter by category
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(product => product.categoryId === selectedCategory);
+      filtered = filtered.filter(product => product.categoryId._id === selectedCategory);
     }
 
     // Filter by search query
@@ -74,17 +74,17 @@ export default function ProductsPage() {
     setFilteredProducts(filtered);
   };
 
-  const handleAddToBill = (product: Product) => {
+  const handleAddToBill = (product: Product<true>) => {
     setBillItems(prev => {
       const existingItem = prev.find(item => item.product.id === product.id);
       if (existingItem) {
         return prev.map(item =>
           item.product.id === product.id
             ? {
-                ...item,
-                quantity: item.quantity + 1,
-                finalPrice: product.price * (item.quantity + 1) * (1 - item.discount / 100)
-              }
+              ...item,
+              quantity: item.quantity + 1,
+              finalPrice: product.price * (item.quantity + 1) * (1 - item.discount / 100)
+            }
             : item
         );
       } else {
@@ -128,7 +128,7 @@ export default function ProductsPage() {
       
       TOTAL: $${billItems.reduce((sum, item) => sum + item.finalPrice, 0).toFixed(2)}
     `;
-    
+
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(`<pre>${billContent}</pre>`);
@@ -210,7 +210,7 @@ export default function ProductsPage() {
         {/* Results */}
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-900">
-            {selectedCategory === 'all' 
+            {selectedCategory === 'all'
               ? `All Products (${filteredProducts.length})`
               : `${getCategoryName(selectedCategory)} (${filteredProducts.length})`
             }
@@ -224,7 +224,7 @@ export default function ProductsPage() {
         {filteredProducts.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500">
-              {searchQuery 
+              {searchQuery
                 ? "No products found matching your search criteria."
                 : selectedCategory === 'all'
                   ? "No products available."

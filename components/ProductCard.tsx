@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { ShoppingCart } from 'lucide-react';
 
 interface ProductCardProps {
-  product: Product;
-  onAddToBill: (product: Product) => void;
+  product: Product<true>;
+  onAddToBill: (product: Product<true>) => void;
 }
 
 export function ProductCard({ product, onAddToBill }: ProductCardProps) {

@@ -7,20 +7,20 @@ export interface Category {
   updatedAt?: string;
 }
 
-export interface Product {
+export interface Product<e extends boolean = false> {
   id: string;
   _id?: string;
   name: string;
   image: string;
   price: number;
-  categoryId: string;
+  categoryId: e extends true ? Category : string;
   articleNo: string;
   createdAt: string;
   updatedAt?: string;
 }
 
 export interface BillItem {
-  product: Product;
+  product: Product<true>;
   quantity: number;
   discount: number;
   finalPrice: number;
