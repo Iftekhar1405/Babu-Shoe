@@ -12,7 +12,7 @@ import { apiClient } from '@/lib/api';
 
 const categorySchema = z.object({
   name: z.string().min(1, 'Category name is required').max(100, 'Name too long'),
-  image: z.string().url('Please enter a valid image URL'),
+  image: z.any().refine((files) => files?.length > 0, 'Please select an image file'),
 });
 
 type CategoryFormData = z.infer<typeof categorySchema>;
@@ -23,27 +23,70 @@ interface AddCategoryFormProps {
 
 export function AddCategoryForm({ onSuccess }: AddCategoryFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
   });
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      setValue('image', e.target.files);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const onSubmit = async (data: CategoryFormData) => {
+    if (!selectedImage) return;
+    
     setIsSubmitting(true);
     try {
-      await apiClient.createCategory(data);
+   
+      const formData = new FormData();
+      formData.append('images', selectedImage);
+      formData.append('color', 'category'); 
+      
+      const uploadResponse = await apiClient.uploadImagesLegacy(formData);
+      
+      
+      const categoryData = {
+        name: data.name,
+        image: uploadResponse.urls[0],
+      };
+      
+      await apiClient.createCategory(categoryData);
+      
+      
       reset();
+      setSelectedImage(null);
+      setImagePreview(null);
       onSuccess();
     } catch (error) {
       console.error('Failed to create category:', error);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const resetForm = () => {
+    reset();
+    setSelectedImage(null);
+    setImagePreview(null);
   };
 
   return (
@@ -65,27 +108,49 @@ export function AddCategoryForm({ onSuccess }: AddCategoryFormProps) {
               <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
             )}
           </div>
-
+          {/* Image functionality */}
           <div>
-            <Label htmlFor="image">Image URL</Label>
+            <Label htmlFor="image">Category Image</Label>
             <Input
               id="image"
-              {...register('image')}
-              placeholder="https://example.com/image.jpg"
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
               className="mt-1"
             />
             {errors.image && (
-              <p className="text-red-500 text-sm mt-1">{errors.image.message}</p>
+              <p className="text-red-500 text-sm mt-1">Please select an image file</p>
+            )}
+            
+            {imagePreview && (
+              <div className="mt-2">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="w-32 h-32 object-cover rounded-md border border-gray-200"
+                />
+              </div>
             )}
           </div>
 
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full bg-black hover:bg-gray-800 text-white"
-          >
-            {isSubmitting ? 'Creating...' : 'Create Category'}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="submit"
+              disabled={isSubmitting || !selectedImage}
+              className="flex-1 bg-black hover:bg-gray-800 text-white"
+            >
+              {isSubmitting ? 'Creating...' : 'Create Category'}
+            </Button>
+            
+            <Button
+              type="button"
+              variant="outline"
+              onClick={resetForm}
+              disabled={isSubmitting}
+            >
+              Reset
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>

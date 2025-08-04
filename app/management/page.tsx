@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { PageHeader } from '@/components/PageHeader';
 import { AddCategoryForm } from '@/components/AddCategoryForm';
@@ -11,7 +11,7 @@ import { Package, Grid3X3, Plus, TrendingUp } from 'lucide-react';
 import { Category, Product } from '@/types';
 import { apiClient } from '@/lib/api';
 
-export default function ManagementPage() {
+const ManagementPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -126,4 +126,6 @@ export default function ManagementPage() {
       </div>
     </div>
   );
-}
+};
+
+export default ManagementPage;

@@ -1,6 +1,6 @@
 import { Category, Product, ApiResponse } from '@/types';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = 'http://localhost:8080/api';
 
 class ApiClient {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
@@ -72,6 +72,14 @@ class ApiClient {
   async searchProducts(query: string): Promise<Product[]> {
     const response = await this.request<Product[]>(`/products?search=${encodeURIComponent(query)}`);
     return response.data.map(prod => ({ ...prod, id: prod._id || prod.id }));
+  }
+
+   async uploadImagesLegacy (formData : FormData)  {
+    const response = await fetch('http://localhost:8080/api/upload/images-legacy', {
+      method: 'POST',
+      body: formData,
+    });
+    return response.json();
   }
 }
 
