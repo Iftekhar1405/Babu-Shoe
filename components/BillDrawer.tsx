@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 
 interface BillDrawerProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export function BillDrawer({
   onPrintBill,
 }: BillDrawerProps) {
   const [localItems, setLocalItems] = useState<BillItem[]>(items);
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     setLocalItems(items);
@@ -68,6 +70,10 @@ export function BillDrawer({
   };
 
   const total = localItems.reduce((sum, item) => sum + item.finalPrice, 0);
+
+  const _onBillPrint = () => {
+    setOpen(true)
+  }
 
   if (!isOpen) return null;
 
@@ -184,7 +190,7 @@ export function BillDrawer({
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                onClick={onPrintBill}
+                onClick={_onBillPrint}
                 className="flex-1 border-gray-300 hover:bg-gray-50"
               >
                 <Printer className="h-4 w-4 mr-2" />
@@ -202,6 +208,47 @@ export function BillDrawer({
           </div>
         )}
       </div>
+      <AddToOrderDialog open={open} setOpen={setOpen} onPrintBill={onPrintBill} />
     </>
   );
+}
+
+function AddToOrderDialog({ open, setOpen, onPrintBill }: { open: boolean, setOpen: ((b: boolean) => void), onPrintBill: () => void }) {
+
+  const handleAddToOrder = () => {
+    setOpen(false)
+    console.log('Added to Order')
+  }
+
+  const handlePrintBill = () => {
+    setOpen(false)
+    onPrintBill()
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="bg-white text-black">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-semibold">
+            Do you want to add this to order or just want to print the bill?
+          </DialogTitle>
+        </DialogHeader>
+        <DialogFooter className="flex flex-row justify-end gap-2">
+          <Button
+            onClick={handleAddToOrder}
+            className="bg-black text-white hover:bg-neutral-800"
+          >
+            Add to Order and Print Bill
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handlePrintBill}
+            className="border-black text-black hover:bg-gray-100"
+          >
+            Just Print Bill
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
 }

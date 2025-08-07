@@ -41,7 +41,7 @@ export function AddCategoryForm({ onSuccess }: AddCategoryFormProps) {
     if (file) {
       setSelectedImage(file);
       setValue('image', e.target.files);
-      
+
       // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -53,25 +53,25 @@ export function AddCategoryForm({ onSuccess }: AddCategoryFormProps) {
 
   const onSubmit = async (data: CategoryFormData) => {
     if (!selectedImage) return;
-    
+
     setIsSubmitting(true);
     try {
-   
+
       const formData = new FormData();
       formData.append('images', selectedImage);
-      formData.append('color', 'category'); 
-      
+      formData.append('color', 'category');
+
       const uploadResponse = await apiClient.uploadImagesLegacy(formData);
-      
-      
+
+
       const categoryData = {
-        name: data.name,
-        image: uploadResponse.urls[0],
+        name: data?.name,
+        image: uploadResponse?.urls?.[0],
       };
-      
+
       await apiClient.createCategory(categoryData);
-      
-      
+
+
       reset();
       setSelectedImage(null);
       setImagePreview(null);
@@ -121,7 +121,7 @@ export function AddCategoryForm({ onSuccess }: AddCategoryFormProps) {
             {errors.image && (
               <p className="text-red-500 text-sm mt-1">Please select an image file</p>
             )}
-            
+
             {imagePreview && (
               <div className="mt-2">
                 <img
@@ -141,7 +141,7 @@ export function AddCategoryForm({ onSuccess }: AddCategoryFormProps) {
             >
               {isSubmitting ? 'Creating...' : 'Create Category'}
             </Button>
-            
+
             <Button
               type="button"
               variant="outline"

@@ -1,4 +1,4 @@
-import { Category, Product, ApiResponse } from '@/types';
+import { Category, Product, ApiResponse, Order } from '@/types';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
@@ -74,13 +74,44 @@ class ApiClient {
     return response.data.map(prod => ({ ...prod, id: prod._id || prod.id }));
   }
 
-   async uploadImagesLegacy (formData : FormData)  {
+  async uploadImagesLegacy(formData: FormData) {
     const response = await fetch('http://localhost:8080/api/upload/images-legacy', {
       method: 'POST',
       body: formData,
     });
     return response.json();
   }
+
+  // Orders
+  async getOrders(): Promise<Order<true>[]> {
+    const response = await this.request<Order<true>[]>('/orders');
+    return response.data.map(order => ({ ...order, id: order._id || order.id }));
+  }
+
+  async getOrderById(id: string): Promise<Order<true>> {
+    const response = await this.request<Order<true>>(`/orders/${id}`);
+    return { ...response.data, id: response.data._id || response.data.id };
+  }
+
+  async createOrder(order: Omit<Order<false>, 'id' | 'createdAt'>): Promise<Order<true>> {
+    const response = await this.request<Order<true>>('/orders', {
+      method: 'POST',
+      body: JSON.stringify(order),
+    });
+    return { ...response.data, id: response.data._id || response.data.id };
+  }
+
+  async updateOrder(
+    id: string,
+    orderUpdates: Partial<Omit<Order<false>, 'id' | 'createdAt' | 'updatedAt'>>
+  ): Promise<Order<true>> {
+    const response = await this.request<Order<true>>(`/orders/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(orderUpdates),
+    });
+    return { ...response.data, id: response.data._id || response.data.id };
+  }
+
 }
 
 export const apiClient = new ApiClient();
