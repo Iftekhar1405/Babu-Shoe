@@ -29,20 +29,20 @@ class ApiClient {
   // Categories
   async getCategories(): Promise<Category[]> {
     const response = await this.request<Category[]>('/categories');
-    return response.data.map(cat => ({ ...cat, id: cat._id || cat.id }));
+    return response.data.map(cat => ({ ...cat, }));
   }
 
   async getCategoryById(id: string): Promise<Category> {
     const response = await this.request<Category>(`/categories/${id}`);
-    return { ...response.data, id: response.data._id || response.data.id };
+    return { ...response.data };
   }
 
-  async createCategory(category: Omit<Category, 'id' | 'createdAt'>): Promise<Category> {
+  async createCategory(category: Category): Promise<Category> {
     const response = await this.request<Category>('/categories', {
       method: 'POST',
       body: JSON.stringify(category),
     });
-    return { ...response.data, id: response.data._id || response.data.id };
+    return { ...response.data };
   }
 
   // Products
@@ -53,15 +53,15 @@ class ApiClient {
 
     const endpoint = `/products${params.toString() ? `?${params.toString()}` : ''}`;
     const response = await this.request<Product<true>[]>(endpoint);
-    return response.data.map(prod => ({ ...prod, id: prod._id || prod.id }));
+    return response.data.map(prod => ({ ...prod, }));
   }
 
   async getProductById(id: string): Promise<Product> {
     const response = await this.request<Product>(`/products/${id}`);
-    return { ...response.data, id: response.data._id || response.data.id };
+    return { ...response.data, };
   }
 
-  async createProduct(product: Omit<Product>): Promise<Product> {
+  async createProduct(product: Product): Promise<Product> {
     const response = await this.request<Product>('/products', {
       method: 'POST',
       body: JSON.stringify(product),
@@ -71,7 +71,7 @@ class ApiClient {
 
   async searchProducts(query: string): Promise<Product[]> {
     const response = await this.request<Product[]>(`/products?search=${encodeURIComponent(query)}`);
-    return response.data.map(prod => ({ ...prod, id: prod._id || prod.id }));
+    return response.data.map(prod => ({ ...prod, }));
   }
 
   async uploadImagesLegacy(formData: FormData) {
@@ -85,12 +85,12 @@ class ApiClient {
   // Orders
   async getOrders(): Promise<Order<true>[]> {
     const response = await this.request<Order<true>[]>('/orders');
-    return response.data.map(order => ({ ...order, id: order._id || order.id }));
+    return response.data.map(order => ({ ...order, }));
   }
 
   async getOrderById(id: string): Promise<Order<true>> {
     const response = await this.request<Order<true>>(`/orders/${id}`);
-    return { ...response.data, id: response.data._id || response.data.id };
+    return { ...response.data, };
   }
 
   async createOrder(order: Omit<Order<false>, 'id' | 'createdAt'>): Promise<Order<true>> {
@@ -98,18 +98,18 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(order),
     });
-    return { ...response.data, id: response.data._id || response.data.id };
+    return { ...response.data, };
   }
 
   async updateOrder(
     id: string,
-    orderUpdates: Partial<Omit<Order<false>, 'id' | 'createdAt' | 'updatedAt'>>
+    orderUpdates: Partial<Order<false>>
   ): Promise<Order<true>> {
     const response = await this.request<Order<true>>(`/orders/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(orderUpdates),
     });
-    return { ...response.data, id: response.data._id || response.data.id };
+    return { ...response.data, };
   }
 
 }
