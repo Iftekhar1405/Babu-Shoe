@@ -8,7 +8,7 @@ import { ProductCard } from '@/components/ProductCard';
 import { BillDrawer } from '@/components/BillDrawer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, Grid3X3, ShoppingBag, TrendingUp } from 'lucide-react';
-import { Category, Product, BillItem } from '@/types';
+import { Category, Product, ProductDetail } from '@/types';
 import { apiClient } from '@/lib/api';
 import { handlePrintBill } from '@/components/handlePrintBill';
 
@@ -16,7 +16,7 @@ export default function Dashboard() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product<true>[]>([]);
   const [searchResults, setSearchResults] = useState<Product<true>[]>([]);
-  const [billItems, setBillItems] = useState<BillItem[]>([]);
+  const [billItems, setBillItems] = useState<ProductDetail[]>([]);
   const [isBillOpen, setIsBillOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,38 +57,38 @@ export default function Dashboard() {
 
   const handleAddToBill = (product: Product) => {
     setBillItems(prev => {
-      const existingItem = prev.find(item => item.product.id === product.id);
+      const existingItem = prev.find(item => item.productId._id === product._id);
       if (existingItem) {
         return prev.map(item =>
-          item.product.id === product.id
+          item.productId._id === product._id
             ? {
               ...item,
               quantity: item.quantity + 1,
-              finalPrice: product.price * (item.quantity + 1) * (1 - item.discount / 100)
+              finalPrice: product.price * (item.quantity + 1) * (1 - item.discountPercent / 100)
             }
             : item
         );
       } else {
         return [...prev, {
-          product,
+          productId: product,
           quantity: 1,
-          discount: 0,
+          discountPercent: 0,
           finalPrice: product.price
         }];
       }
     });
   };
 
-  const handleUpdateBillItem = (productId: string, updates: Partial<BillItem>) => {
+  const handleUpdateBillItem = (productId: string, updates: Partial<ProductDetail>) => {
     setBillItems(prev =>
       prev.map(item =>
-        item.product.id === productId ? { ...item, ...updates } : item
+        item.productId._id === productId ? { ...item, ...updates } : item
       )
     );
   };
 
   const handleRemoveBillItem = (productId: string) => {
-    setBillItems(prev => prev.filter(item => item.product.id !== productId));
+    setBillItems(prev => prev.filter(item => item.productId._id !== productId));
   };
 
   const handleClearBill = () => {
@@ -191,7 +191,7 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {searchResults.map((product) => (
                   <ProductCard
-                    key={product.id}
+                    key={product._id}
                     product={product}
                     onAddToBill={handleAddToBill}
                   />
@@ -207,7 +207,7 @@ export default function Dashboard() {
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Categories</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {categories.slice(0, 4).map((category) => (
-                  <CategoryCard key={category.id} category={category} />
+                  <CategoryCard key={category._id} category={category} />
                 ))}
               </div>
             </section>
@@ -218,7 +218,7 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {products.slice(0, 8).map((product) => (
                   <ProductCard
-                    key={product.id}
+                    key={product._id}
                     product={product}
                     onAddToBill={handleAddToBill}
                   />

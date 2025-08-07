@@ -61,12 +61,12 @@ class ApiClient {
     return { ...response.data, id: response.data._id || response.data.id };
   }
 
-  async createProduct(product: Omit<Product, 'id' | 'createdAt'>): Promise<Product> {
+  async createProduct(product: Omit<Product>): Promise<Product> {
     const response = await this.request<Product>('/products', {
       method: 'POST',
       body: JSON.stringify(product),
     });
-    return { ...response.data, id: response.data._id || response.data.id };
+    return { ...response.data, };
   }
 
   async searchProducts(query: string): Promise<Product[]> {

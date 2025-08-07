@@ -9,7 +9,7 @@ import { BillDrawer } from '@/components/BillDrawer';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, ShoppingBag } from 'lucide-react';
-import { Category, Product, BillItem } from '@/types';
+import { Category, Product, ProductDetail } from '@/types';
 import { apiClient } from '@/lib/api';
 import { handlePrintBill } from '@/components/handlePrintBill';
 
@@ -21,7 +21,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product<true>[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product<true>[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryId || 'all');
-  const [billItems, setBillItems] = useState<BillItem[]>([]);
+  const [billItems, setBillItems] = useState<ProductDetail[]>([]);
   const [isBillOpen, setIsBillOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,38 +77,38 @@ export default function ProductsPage() {
 
   const handleAddToBill = (product: Product<true>) => {
     setBillItems(prev => {
-      const existingItem = prev.find(item => item.product.id === product.id);
+      const existingItem = prev.find(item => item.productId._id === product._id);
       if (existingItem) {
         return prev.map(item =>
-          item.product.id === product.id
+          item.productId._id === product._id
             ? {
               ...item,
               quantity: item.quantity + 1,
-              finalPrice: product.price * (item.quantity + 1) * (1 - item.discount / 100)
+              finalPrice: product.price * (item.quantity + 1) * (1 - item.discountPercent / 100)
             }
             : item
         );
       } else {
         return [...prev, {
-          product,
+          productId: product,
           quantity: 1,
-          discount: 0,
+          discountPercent: 0,
           finalPrice: product.price
         }];
       }
     });
   };
 
-  const handleUpdateBillItem = (productId: string, updates: Partial<BillItem>) => {
+  const handleUpdateBillItem = (productId: string, updates: Partial<ProductDetail>) => {
     setBillItems(prev =>
       prev.map(item =>
-        item.product.id === productId ? { ...item, ...updates } : item
+        item.productId._id === productId ? { ...item, ...updates } : item
       )
     );
   };
 
   const handleRemoveBillItem = (productId: string) => {
-    setBillItems(prev => prev.filter(item => item.product.id !== productId));
+    setBillItems(prev => prev.filter(item => item.productId._id !== productId));
   };
 
   const handleClearBill = () => {
@@ -116,7 +116,7 @@ export default function ProductsPage() {
   };
 
   const getCategoryName = (id: string) => {
-    const category = categories.find(cat => cat.id === id);
+    const category = categories.find(cat => cat._id === id);
     return category ? category.name : 'Unknown Category';
   };
 
@@ -174,8 +174,8 @@ export default function ProductsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
+                  {categories.length && categories.map((category) => (
+                    <SelectItem key={category._id} value={category._id || ''}>
                       {category.name}
                     </SelectItem>
                   ))}
@@ -214,7 +214,7 @@ export default function ProductsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filteredProducts.map((product) => (
               <ProductCard
-                key={product.id}
+                key={product._id}
                 product={product}
                 onAddToBill={handleAddToBill}
               />

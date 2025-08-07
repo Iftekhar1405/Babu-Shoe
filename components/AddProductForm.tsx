@@ -65,11 +65,11 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
 
   const addColorSection = () => {
     const newId = Date.now().toString();
-    setColors(prev => [...prev, { 
-      id: newId, 
-      colorName: '', 
-      urls: [], 
-      isUploading: false 
+    setColors(prev => [...prev, {
+      id: newId,
+      colorName: '',
+      urls: [],
+      isUploading: false
     }]);
   };
 
@@ -78,7 +78,7 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
   };
 
   const updateColorName = (id: string, colorName: string) => {
-    setColors(prev => prev.map(item => 
+    setColors(prev => prev.map(item =>
       item.id === id ? { ...item, colorName } : item
     ));
   };
@@ -97,12 +97,12 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
 
     try {
       const formData = new FormData();
-      
+
       // Add all selected files
       Array.from(files).forEach(file => {
         formData.append('images', file);
       });
-      
+
       // Add color name
       formData.append('color', colorData.colorName.trim());
 
@@ -116,13 +116,13 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
       }
 
       const result = await response.json();
-      
-      const uploadedUrls = Array.isArray(result) ? result : 
-                          result.urls ? result.urls : 
-                          result.images ? result.images : [];
+
+      const uploadedUrls = Array.isArray(result) ? result :
+        result.urls ? result.urls :
+          result.images ? result.images : [];
 
       setColors(prev => prev.map(item =>
-        item.id === colorId 
+        item.id === colorId
           ? { ...item, urls: [...item.urls, ...uploadedUrls], isUploading: false }
           : item
       ));
@@ -130,7 +130,7 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
     } catch (error) {
       console.error('Failed to upload images:', error);
       alert('Failed to upload images. Please try again.');
-      
+
       setColors(prev => prev.map(item =>
         item.id === colorId ? { ...item, isUploading: false } : item
       ));
@@ -139,7 +139,7 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
 
   const removeImage = (colorId: string, urlIndex: number) => {
     setColors(prev => prev.map(item =>
-      item.id === colorId 
+      item.id === colorId
         ? { ...item, urls: item.urls.filter((_, index) => index !== urlIndex) }
         : item
     ));
@@ -162,7 +162,7 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
       console.log("🪵 ~ onSubmit ~ productData:", productData)
 
       await apiClient.createProduct(productData);
-      
+
       reset();
       setColors([{ id: '1', colorName: '', urls: [], isUploading: false }]);
       onSuccess();
@@ -233,7 +233,7 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
+                      <SelectItem key={category._id} value={category._id || ''}>
                         {category.name}
                       </SelectItem>
                     ))}
@@ -304,9 +304,8 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
                           <div className="flex-1">
                             <label
                               htmlFor={`images-${colorData.id}`}
-                              className={`flex items-center justify-center px-4 py-2 border border-dashed border-gray-300 rounded-lg cursor-pointer bg-white hover:bg-gray-50 transition-colors ${
-                                colorData.isUploading ? 'opacity-50 cursor-not-allowed' : ''
-                              } ${!colorData.colorName.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              className={`flex items-center justify-center px-4 py-2 border border-dashed border-gray-300 rounded-lg cursor-pointer bg-white hover:bg-gray-50 transition-colors ${colorData.isUploading ? 'opacity-50 cursor-not-allowed' : ''
+                                } ${!colorData.colorName.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                               <div className="flex items-center space-x-2">
                                 {colorData.isUploading ? (
@@ -340,7 +339,7 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
                               />
                             </label>
                           </div>
-                          
+
                           {colorData.urls.length > 0 && (
                             <div className="flex items-center space-x-2 text-green-600 bg-green-50 px-3 py-1 rounded-full">
                               <Check className="w-4 h-4" />
