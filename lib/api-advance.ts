@@ -298,7 +298,7 @@ export const useInfiniteProducts = (
     return useInfiniteQuery({
         queryKey: queryKeys.productsList({ ...filters, infinite: true } as any),
         queryFn: ({ pageParam = 1 }) =>
-            apiClient.getProductsPaginated({ ...filters, page: pageParam }),
+            apiClient.getProductsPaginated({ ...filters, page: pageParam as number }),
         getNextPageParam: (lastPage) => {
             if (lastPage.pagination.page < lastPage.pagination.totalPages) {
                 return lastPage.pagination.page + 1;
@@ -385,7 +385,7 @@ export const useCreateCategory = (
             queryClient.invalidateQueries({ queryKey: queryKeys.categories() });
 
             // Optionally add the new category to the cache
-            queryClient.setQueryData(queryKeys.category(newCategory.id), newCategory);
+            queryClient.setQueryData(queryKeys.category(newCategory._id || ''), newCategory);
         },
         onError: (error) => {
             console.error('Failed to create category:', error);
@@ -408,7 +408,7 @@ export const useUpdateCategory = (
             // Update the category in the categories list
             queryClient.setQueryData<Category[]>(
                 queryKeys.categories(),
-                (old) => old?.map(cat => cat.id === id ? updatedCategory : cat)
+                (old) => old?.map(cat => cat._id === id ? updatedCategory : cat)
             );
         },
         ...options,
@@ -426,7 +426,7 @@ export const useDeleteCategory = (
             // Remove from categories list
             queryClient.setQueryData<Category[]>(
                 queryKeys.categories(),
-                (old) => old?.filter(cat => cat.id !== deletedId)
+                (old) => old?.filter(cat => cat._id !== deletedId)
             );
 
             // Remove the specific category query
@@ -450,7 +450,7 @@ export const useCreateProduct = (
             queryClient.invalidateQueries({ queryKey: queryKeys.products() });
 
             // Set the new product in cache
-            queryClient.setQueryData(queryKeys.product(newProduct.id), newProduct);
+            queryClient.setQueryData(queryKeys.product(newProduct._id || ''), newProduct);
         },
         ...options,
     });
@@ -524,7 +524,7 @@ export const useCreateOrder = (
             queryClient.invalidateQueries({ queryKey: queryKeys.orders() });
 
             // Set the new order in cache
-            queryClient.setQueryData(queryKeys.order(newOrder.id), newOrder);
+            queryClient.setQueryData(queryKeys.order(newOrder._id || ''), newOrder);
         },
         ...options,
     });
@@ -544,7 +544,7 @@ export const useUpdateOrder = (
             // Update in orders list
             queryClient.setQueryData<Order<true>[]>(
                 queryKeys.orders(),
-                (old) => old?.map(order => order.id === id ? updatedOrder : order)
+                (old) => old?.map(order => order._id === id ? updatedOrder : order)
             );
         },
         ...options,
@@ -562,7 +562,7 @@ export const useDeleteOrder = (
             // Remove from orders list
             queryClient.setQueryData<Order<true>[]>(
                 queryKeys.orders(),
-                (old) => old?.filter(order => order.id !== deletedId)
+                (old) => old?.filter(order => order._id !== deletedId)
             );
 
             // Remove the specific order query
