@@ -93,7 +93,7 @@ class ApiClient {
         return response.data;
     }
 
-    async createCategory(category: Omit<Category, 'id'>): Promise<Category> {
+    async createCategory(category: Partial<Category>): Promise<Category> {
         const response = await this.request<Category>('/categories', {
             method: 'POST',
             body: JSON.stringify(category),
@@ -145,7 +145,7 @@ class ApiClient {
         return response.data;
     }
 
-    async createProduct(product: Omit<Product, 'id'>): Promise<Product> {
+    async createProduct(product: Partial<Product<false>>): Promise<Product> {
         const response = await this.request<Product>('/products', {
             method: 'POST',
             body: JSON.stringify(product),
@@ -373,12 +373,12 @@ export const useOrder = <TData = Order<true>>(
 
 // Category Mutations
 export const useCreateCategory = (
-    options?: UseMutationOptions<Category, ApiError, Omit<Category, 'id'>>
+    options?: UseMutationOptions<Category, ApiError, Partial<Category>>
 ) => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (categoryData: Omit<Category, 'id'>) =>
+        mutationFn: (categoryData: Partial<Category>) =>
             apiClient.createCategory(categoryData),
         onSuccess: (newCategory) => {
             // Invalidate and refetch categories list
@@ -438,12 +438,12 @@ export const useDeleteCategory = (
 
 // Product Mutations
 export const useCreateProduct = (
-    options?: UseMutationOptions<Product, ApiError, Omit<Product, 'id'>>
+    options?: UseMutationOptions<Product, ApiError, Partial<Product<false>>>
 ) => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (productData: Omit<Product, 'id'>) =>
+        mutationFn: (productData: Partial<Product<false>>) =>
             apiClient.createProduct(productData),
         onSuccess: (newProduct) => {
             // Invalidate products lists

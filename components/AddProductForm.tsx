@@ -1,32 +1,41 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import CreatableSelect from 'react-select/creatable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { X, Plus, Upload, Loader2, Check, Image as ImageIcon } from 'lucide-react';
-import { Category } from '@/types';
-import { apiClient } from '@/lib/api';
+import { useCategories, useCreateProduct } from '@/lib/api-advance';
+import { Product, ColorData } from '@/types';
+import { toast } from 'sonner';
 
 const productSchema = z.object({
   name: z.string().min(1, 'Product name is required').max(200, 'Name too long'),
+  image: z.string().min(1, 'Main product image is required'),
+  description: z.string().min(10, 'Description must be at least 10 characters').max(1000, 'Description too long'),
   price: z.number().min(0.01, 'Price must be greater than 0'),
   categoryId: z.string().min(1, 'Please select a category'),
   articleNo: z.string().min(1, 'Article number is required').max(50, 'Article number too long'),
+  companyId: z.string().min(1, 'Company is required'),
+  sizes: z.array(z.string()).min(1, 'At least one size is required'),
+  inStock: z.boolean().default(true),
+  tags: z.array(z.string()).optional().default([])
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
 
-interface ColorData {
+interface ColorFormData {
   id: string;
   colorName: string;
   urls: string[];
   isUploading: boolean;
+  availableSize: string[];
 }
 
 interface AddProductFormProps {
@@ -34,34 +43,84 @@ interface AddProductFormProps {
 }
 
 export function AddProductForm({ onSuccess }: AddProductFormProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [colors, setColors] = useState<ColorData[]>([
-    { id: '1', colorName: '', urls: [], isUploading: false }
+  const [colors, setColors] = useState<ColorFormData[]>([
+    { id: '1', colorName: '', urls: [], isUploading: false, availableSize: [] }
   ]);
+  const [tagOptions, setTagOptions] = useState<{ label: string; value: string }[]>([]);
+  const [selectedTags, setSelectedTags] = useState<{ label: string; value: string }[]>([]);
+  const [mainImageUrl, setMainImageUrl] = useState<string>('');
+  const [isUploadingMainImage, setIsUploadingMainImage] = useState<boolean>(false);
+
+  const { data: categories } = useCategories();
+  const { mutate, isPending: isSubmitting } = useCreateProduct({
+    onSuccess: () => {
+      onSuccess();
+      reset();
+      setColors([{ id: '1', colorName: '', urls: [], isUploading: false, availableSize: [] }]);
+      setSelectedTags([]);
+      setMainImageUrl('');
+    },
+    onError: (err) => {
+      toast('Something went wrong', { description: err.message })
+    }
+  });
 
   const {
     register,
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
+    defaultValues: {
+      inStock: true,
+      sizes: [],
+      image: '',
+      description: '',
+      tags: [],
+    }
   });
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const data = await apiClient.getCategories();
-        setCategories(data);
-      } catch (error) {
-        console.error('Failed to fetch categories:', error);
-      }
-    };
+  const uploadMainImage = async (files: FileList) => {
+    if (!files || files.length === 0) return;
 
-    fetchCategories();
-  }, []);
+    setIsUploadingMainImage(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('images', files[0]); // Only upload first file for main image
+      formData.append('color', 'main'); // Use 'main' as identifier for main image
+
+      const response = await fetch('http://localhost:8080/api/upload/images-legacy', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      const uploadedUrls = Array.isArray(result) ? result :
+        result.urls ? result.urls :
+          result.images ? result.images : [];
+
+      if (uploadedUrls.length > 0) {
+        const imageUrl = uploadedUrls[0];
+        setMainImageUrl(imageUrl);
+        setValue('image', imageUrl);
+        toast('Success', { description: 'Main image uploaded successfully' });
+      }
+
+    } catch (error) {
+      console.error('Failed to upload main image:', error);
+      toast('Error', { description: 'Failed to upload main image. Please try again.' });
+    } finally {
+      setIsUploadingMainImage(false);
+    }
+  };
 
   const addColorSection = () => {
     const newId = Date.now().toString();
@@ -69,7 +128,8 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
       id: newId,
       colorName: '',
       urls: [],
-      isUploading: false
+      isUploading: false,
+      availableSize: []
     }]);
   };
 
@@ -83,27 +143,28 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
     ));
   };
 
+  const updateAvailableSizes = (id: string, sizes: string) => {
+    setColors(prev => prev.map(item =>
+      item.id === id ? { ...item, availableSize: sizes.split(',').map(s => s.trim()).filter(s => s.length > 0) } : item
+    ));
+  };
+
   const uploadImages = async (colorId: string, files: FileList) => {
     const colorData = colors.find(c => c.id === colorId);
     if (!colorData || !colorData.colorName.trim()) {
-      alert('Please enter a color name before uploading images');
+      toast('Error', { description: 'Please enter a color name before uploading images' });
       return;
     }
 
-    // Set uploading state
     setColors(prev => prev.map(item =>
       item.id === colorId ? { ...item, isUploading: true } : item
     ));
 
     try {
       const formData = new FormData();
-
-      // Add all selected files
       Array.from(files).forEach(file => {
         formData.append('images', file);
       });
-
-      // Add color name
       formData.append('color', colorData.colorName.trim());
 
       const response = await fetch('http://localhost:8080/api/upload/images-legacy', {
@@ -116,7 +177,6 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
       }
 
       const result = await response.json();
-
       const uploadedUrls = Array.isArray(result) ? result :
         result.urls ? result.urls :
           result.images ? result.images : [];
@@ -127,10 +187,11 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
           : item
       ));
 
+      toast('Success', { description: 'Images uploaded successfully' });
+
     } catch (error) {
       console.error('Failed to upload images:', error);
-      alert('Failed to upload images. Please try again.');
-
+      toast('Error', { description: 'Failed to upload images. Please try again.' });
       setColors(prev => prev.map(item =>
         item.id === colorId ? { ...item, isUploading: false } : item
       ));
@@ -146,30 +207,46 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
   };
 
   const onSubmit = async (data: ProductFormData) => {
-    setIsSubmitting(true);
+    console.log('Form data:', data);
+    console.log('Colors data:', colors);
+
+    // Validate that we have at least one color with images
+    const validColors = colors.filter(color => color.colorName.trim() && color.urls.length > 0);
+
+    if (validColors.length === 0) {
+      toast('Error', { description: 'Please add at least one color with images' });
+      return;
+    }
+
+    // Transform colors to match ColorData[] type (not Partial<ColorData[]>)
+    const transformedColors: ColorData[] = validColors.map(color => ({
+      color: color.colorName.trim(),
+      urls: color.urls,
+      availableSize: color.availableSize.length > 0 ? color.availableSize : data.sizes, // Use product sizes if color-specific sizes are not provided
+    }));
+
+    // Create product data matching Product<false> interface
+    const productData: Product<false> = {
+      name: data.name,
+      image: data.image,
+      description: data.description,
+      price: data.price,
+      categoryId: data.categoryId,
+      articleNo: data.articleNo,
+      companyId: data.companyId,
+      sizes: data.sizes,
+      inStock: data.inStock,
+      tags: data.tags || [], // Convert undefined to empty array
+      colors: transformedColors, // This should be ColorData[], not Partial<ColorData[]>
+    };
+
+    console.log("🪵 ~ onSubmit ~ productData:", productData);
+
     try {
-      const validColors = colors
-        .filter(color => color.colorName.trim() && color.urls.length > 0)
-        .map(color => ({
-          color: color.colorName.trim(),
-          urls: color.urls
-        }));
-
-      const productData = {
-        ...data,
-        colors: validColors
-      };
-      console.log("🪵 ~ onSubmit ~ productData:", productData)
-
-      await apiClient.createProduct(productData);
-
-      reset();
-      setColors([{ id: '1', colorName: '', urls: [], isUploading: false }]);
-      onSuccess();
+      mutate(productData);
     } catch (error) {
-      console.error('Failed to create product:', error);
-    } finally {
-      setIsSubmitting(false);
+      console.error('Mutation error:', error);
+      toast('Error', { description: 'Failed to create product' });
     }
   };
 
@@ -184,64 +261,161 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
             {/* Basic Product Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-semibold text-gray-700">Product Name</Label>
-                <Input
-                  id="name"
-                  {...register('name')}
-                  placeholder="Enter product name"
-                  className="h-11 border-gray-200 focus:border-black-500 focus:ring-2 focus:ring-black-200 transition-all"
-                />
-                {errors.name && (
-                  <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>
-                )}
+              <div>
+                <Label>Product Name</Label>
+                <Input {...register('name')} placeholder="Enter product name" />
+                {errors.name && <p className="text-red-500 text-xs">{errors.name.message}</p>}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="articleNo" className="text-sm font-semibold text-gray-700">Article Number</Label>
-                <Input
-                  id="articleNo"
-                  {...register('articleNo')}
-                  placeholder="Enter article number"
-                  className="h-11 border-gray-200 focus:border-black-500 focus:ring-2 focus:ring-black-200 transition-all"
-                />
-                {errors.articleNo && (
-                  <p className="text-red-500 text-xs mt-1">{errors.articleNo.message}</p>
-                )}
+              <div>
+                <Label>Article Number</Label>
+                <Input {...register('articleNo')} placeholder="Enter article number" />
+                {errors.articleNo && <p className="text-red-500 text-xs">{errors.articleNo.message}</p>}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="price" className="text-sm font-semibold text-gray-700">Price ($)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  step="0.01"
-                  {...register('price', { valueAsNumber: true })}
-                  placeholder="0.00"
-                  className="h-11 border-gray-200 focus:border-black-500 focus:ring-2 focus:ring-black-200 transition-all"
-                />
-                {errors.price && (
-                  <p className="text-red-500 text-xs mt-1">{errors.price.message}</p>
-                )}
+              <div className="md:col-span-2">
+                <Label>Main Product Image</Label>
+                <div className="space-y-2">
+                  <label
+                    className={`block w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-gray-400 transition-colors ${isUploadingMainImage ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                  >
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={isUploadingMainImage}
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          uploadMainImage(e.target.files);
+                          e.target.value = '';
+                        }
+                      }}
+                    />
+                    <div className="flex flex-col items-center space-y-2">
+                      <ImageIcon className="h-8 w-8 text-gray-400" />
+                      <span className="text-sm text-gray-600">
+                        {isUploadingMainImage ? 'Uploading...' : 'Upload Main Product Image'}
+                      </span>
+                    </div>
+                  </label>
+
+                  {mainImageUrl && (
+                    <div className="flex items-center space-x-3">
+                      <img
+                        src={mainImageUrl}
+                        alt="Main product"
+                        className="w-20 h-20 object-cover rounded border"
+                      />
+                      <div className="flex-1">
+                        <div className="text-green-600 flex items-center space-x-1">
+                          <Check className="w-4 h-4" />
+                          <span className="text-sm">Main image uploaded successfully</span>
+                        </div>
+                        <p className="text-xs text-gray-500 truncate">{mainImageUrl}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMainImageUrl('');
+                          setValue('image', '');
+                        }}
+                        className="text-red-500 hover:text-red-700 p-1"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {errors.image && <p className="text-red-500 text-xs">{errors.image.message}</p>}
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-gray-700">Category</Label>
+              <div className="md:col-span-2">
+                <Label>Description</Label>
+                <textarea
+                  {...register('description')}
+                  placeholder="Enter product description (minimum 10 characters)"
+                  className="w-full p-3 border border-gray-300 rounded-md resize-y min-h-[100px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows={4}
+                />
+                {errors.description && <p className="text-red-500 text-xs">{errors.description.message}</p>}
+              </div>
+
+              <div>
+                <Label>Price ($)</Label>
+                <Input type="number" step="0.01" {...register('price', { valueAsNumber: true })} placeholder="0.00" />
+                {errors.price && <p className="text-red-500 text-xs">{errors.price.message}</p>}
+              </div>
+
+              <div>
+                <Label>Category</Label>
                 <Select onValueChange={(value) => setValue('categoryId', value)}>
-                  <SelectTrigger className="h-11 border-gray-200 focus:border-black-500 focus:ring-2 focus:ring-black-200 transition-all">
+                  <SelectTrigger>
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((category) => (
+                    {categories?.map((category) => (
                       <SelectItem key={category._id} value={category._id || ''}>
                         {category.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.categoryId && (
-                  <p className="text-red-500 text-xs mt-1">{errors.categoryId.message}</p>
-                )}
+                {errors.categoryId && <p className="text-red-500 text-xs">{errors.categoryId.message}</p>}
+              </div>
+
+              <div>
+                <Label>Company ID</Label>
+                <Input {...register('companyId')} placeholder="Enter company ID" />
+                {errors.companyId && <p className="text-red-500 text-xs">{errors.companyId.message}</p>}
+              </div>
+
+              <div>
+                <Label>Sizes (comma separated)</Label>
+                <Input
+                  placeholder="S, M, L"
+                  onChange={(e) => {
+                    const sizes = e.target.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                    setValue('sizes', sizes);
+                  }}
+                />
+                {errors.sizes && <p className="text-red-500 text-xs">{errors.sizes.message}</p>}
+              </div>
+
+              <div>
+                <Label>In Stock</Label>
+                <Select onValueChange={(value) => setValue('inStock', value === 'true')}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select stock status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Yes</SelectItem>
+                    <SelectItem value="false">No</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Tags</Label>
+                <CreatableSelect
+                  isMulti
+                  value={selectedTags}
+                  onChange={(newValue: any) => {
+                    const tags = newValue || [];
+                    setSelectedTags(tags);
+                    setValue('tags', tags.map((v: any) => v.value));
+                  }}
+                  options={tagOptions}
+                  onCreateOption={(inputValue: string) => {
+                    const newOption = { label: inputValue, value: inputValue };
+                    setTagOptions(prev => [...prev, newOption]);
+                    const newTags = [...selectedTags, newOption];
+                    setSelectedTags(newTags);
+                    setValue('tags', newTags.map(t => t.value));
+                  }}
+                  placeholder="Add tags..."
+                />
+                {errors.tags && <p className="text-red-500 text-xs">{errors.tags.message}</p>}
               </div>
             </div>
 
@@ -252,148 +426,126 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Product Images</h3>
+                  <h3 className="text-lg font-semibold">Product Images</h3>
                   <p className="text-sm text-gray-600">Add images for each color variant</p>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addColorSection}
-                  className="flex items-center space-x-2 border-black-200 text-black-600 hover:bg-black-50 hover:border-black-300"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Add Color</span>
+                <Button type="button" variant="outline" size="sm" onClick={addColorSection}>
+                  <Plus className="h-4 w-4" /> Add Color
                 </Button>
               </div>
 
-              <div className="space-y-4">
-                {colors.map((colorData, index) => (
-                  <Card key={colorData.id} className="border border-gray-200 bg-gray-50/30">
-                    <CardContent className="p-6">
-                      <div className="space-y-4">
-                        {/* Color Name and Remove Button */}
-                        <div className="flex items-start space-x-4">
-                          <div className="flex-1">
-                            <Label htmlFor={`color-${colorData.id}`} className="text-sm font-medium text-gray-700">
-                              Color Name
-                            </Label>
-                            <Input
-                              id={`color-${colorData.id}`}
-                              value={colorData.colorName}
-                              onChange={(e) => updateColorName(colorData.id, e.target.value)}
-                              placeholder="e.g., Midnight Black, Ocean black"
-                              className="mt-1 h-10 border-gray-200 focus:border-black-500 focus:ring-1 focus:ring-black-200"
-                            />
-                          </div>
-                          {colors.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeColorSection(colorData.id)}
-                              className="mt-6 text-red-500 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-
-                        {/* Upload Section */}
-                        <div className="flex items-center space-x-4">
-                          <div className="flex-1">
-                            <label
-                              htmlFor={`images-${colorData.id}`}
-                              className={`flex items-center justify-center px-4 py-2 border border-dashed border-gray-300 rounded-lg cursor-pointer bg-white hover:bg-gray-50 transition-colors ${colorData.isUploading ? 'opacity-50 cursor-not-allowed' : ''
-                                } ${!colorData.colorName.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
-                              <div className="flex items-center space-x-2">
-                                {colorData.isUploading ? (
-                                  <>
-                                    <Loader2 className="w-4 h-4 text-black-500 animate-spin" />
-                                    <span className="text-sm text-black-600 font-medium">Uploading...</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <ImageIcon className="w-4 h-4 text-gray-500" />
-                                    <span className="text-sm text-gray-600">
-                                      {colorData.colorName ? `Upload images for ${colorData.colorName}` : 'Enter color name first'}
-                                    </span>
-                                    <Upload className="w-4 h-4 text-gray-400" />
-                                  </>
-                                )}
-                              </div>
-                              <input
-                                id={`images-${colorData.id}`}
-                                type="file"
-                                multiple
-                                accept="image/*"
-                                className="hidden"
-                                disabled={colorData.isUploading || !colorData.colorName.trim()}
-                                onChange={(e) => {
-                                  if (e.target.files && e.target.files.length > 0) {
-                                    uploadImages(colorData.id, e.target.files);
-                                    e.target.value = '';
-                                  }
-                                }}
-                              />
-                            </label>
-                          </div>
-
-                          {colorData.urls.length > 0 && (
-                            <div className="flex items-center space-x-2 text-green-600 bg-green-50 px-3 py-1 rounded-full">
-                              <Check className="w-4 h-4" />
-                              <span className="text-sm font-medium">{colorData.urls.length} uploaded</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Uploaded Images Preview */}
-                        {colorData.urls.length > 0 && (
-                          <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 pt-2">
-                            {colorData.urls.map((url, imgIndex) => (
-                              <div key={imgIndex} className="relative group">
-                                <img
-                                  src={url}
-                                  alt={`${colorData.colorName} ${imgIndex + 1}`}
-                                  className="w-full h-12 object-cover rounded-md border border-gray-200 shadow-sm"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => removeImage(colorData.id, imgIndex)}
-                                  className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-                                >
-                                  <X className="h-2.5 w-2.5" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+              {colors.map((colorData) => (
+                <Card key={colorData.id} className="border">
+                  <CardContent className="p-6 space-y-4">
+                    <div className="flex items-start space-x-4">
+                      <div className="flex-1">
+                        <Label>Color Name</Label>
+                        <Input
+                          value={colorData.colorName}
+                          onChange={(e) => updateColorName(colorData.id, e.target.value)}
+                          placeholder="e.g., Midnight Black"
+                        />
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                      {colors.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeColorSection(colorData.id)}
+                          className="mt-6 text-red-500"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label>Available Sizes (optional - defaults to product sizes)</Label>
+                      <Input
+                        value={colorData.availableSize.join(', ')}
+                        onChange={(e) => updateAvailableSizes(colorData.id, e.target.value)}
+                        placeholder="S, M, L (leave empty to use product sizes)"
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-4">
+                      <label
+                        className={`flex-1 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-gray-400 transition-colors ${colorData.isUploading ? 'opacity-50 cursor-not-allowed' : ''
+                          } ${!colorData.colorName.trim() ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
+                      >
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          className="hidden"
+                          disabled={colorData.isUploading || !colorData.colorName.trim()}
+                          onChange={(e) => {
+                            if (e.target.files) {
+                              uploadImages(colorData.id, e.target.files);
+                              e.target.value = '';
+                            }
+                          }}
+                        />
+                        <div className="flex flex-col items-center space-y-2">
+                          <Upload className="h-8 w-8 text-gray-400" />
+                          <span className="text-sm text-gray-600">
+                            {colorData.isUploading ? 'Uploading...' : 'Upload Images'}
+                          </span>
+                        </div>
+                      </label>
+
+                      {colorData.urls.length > 0 && (
+                        <div className="text-green-600 flex items-center space-x-1">
+                          <Check className="w-4 h-4" />
+                          <span className="text-sm">{colorData.urls.length} uploaded</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {colorData.urls.length > 0 && (
+                      <div className="grid grid-cols-6 gap-2">
+                        {colorData.urls.map((url, idx) => (
+                          <div key={idx} className="relative group">
+                            <img
+                              src={url}
+                              alt={`${colorData.colorName} ${idx + 1}`}
+                              className="w-full h-16 object-cover rounded border"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeImage(colorData.id, idx)}
+                              className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
             </div>
 
-            {/* Submit Button */}
             <div className="pt-6">
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full h-12 bg-gradient-to-r from-black-600 to-black-700 hover:from-black-700 hover:to-black-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                className="w-full"
               >
                 {isSubmitting ? (
-                  <div className="flex items-center space-x-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Creating Product...</span>
-                  </div>
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Creating Product...
+                  </>
                 ) : (
                   'Create Product'
                 )}
               </Button>
             </div>
           </form>
+
         </CardContent>
       </Card>
     </div>

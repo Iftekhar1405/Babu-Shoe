@@ -7,30 +7,15 @@ import { CategoryCard } from '@/components/CategoryCard';
 import { AddCategoryForm } from '@/components/AddCategoryForm';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Category } from '@/types';
-import { apiClient } from '@/lib/api';
+import { useCategories } from '@/lib/api-advance';
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
-    try {
-      const data = await apiClient.getCategories();
-      setCategories(data);
-    } catch (error) {
-      console.error('Failed to fetch categories:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { data: categories, isLoading, refetch } = useCategories()
 
   const handleCategoryAdded = () => {
-    fetchCategories();
+    refetch();
     setIsDialogOpen(false);
   };
 
@@ -56,7 +41,7 @@ export default function CategoriesPage() {
           }}
         />
 
-        {categories.length === 0 ? (
+        {categories?.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 mb-4">No categories found.</p>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -72,7 +57,7 @@ export default function CategoriesPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {categories.map((category) => (
+            {categories?.map((category) => (
               <CategoryCard key={category._id} category={category} />
             ))}
           </div>

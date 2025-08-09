@@ -6,24 +6,26 @@ export interface Category {
   updatedAt?: string;
 }
 
+export interface ColorData {
+  _id?: string;
+  color?: string;
+  urls?: string[];
+  availableSize?: string[]
+}
 export interface Product<e extends boolean = true> {
   _id?: string;
   name: string;
   image: string;
   description: string;
   price: number;
-  categoryId: e extends true ? Category : string;
+  categoryId?: e extends true ? Category : string;
   articleNo: string;
-  colors: {
-    color: string,
-    urls: string[],
-    availableSize: string[]
-  }[];
+  colors: Partial<ColorData[]>;
   companyId: e extends true ? { name: string, logo: string } : string;
   sizes: string[];
   inStock: boolean;
-  tags: e extends true ? { _id: string, name: string } : string
-  createdAt: string;
+  tags: e extends true ? { _id: string, name: string }[] : string[]
+  createdAt?: string;
   updatedAt?: string;
 }
 

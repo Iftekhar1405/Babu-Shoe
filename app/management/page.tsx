@@ -9,41 +9,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, Grid3X3, Plus, TrendingUp } from 'lucide-react';
 import { Category, Product } from '@/types';
-import { apiClient } from '@/lib/api';
+import { useCategories, useProducts } from '@/lib/api-advance';
 
 const ManagementPage: React.FC = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      const [categoriesData, productsData] = await Promise.all([
-        apiClient.getCategories(),
-        apiClient.getProducts()
-      ]);
-      setCategories(categoriesData);
-      setProducts(productsData);
-    } catch (error) {
-      console.error('Failed to fetch data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { data: categories, isLoading: categoryLoading, refetch: categoryRefetch } = useCategories()
+  const { data: products, isLoading: productsLoading, refetch: productsRefetch } = useProducts()
 
   const handleCategoryAdded = () => {
-    fetchData();
+    categoryRefetch();
   };
 
   const handleProductAdded = () => {
-    fetchData();
+    productsRefetch();
   };
 
-  if (isLoading) {
+  if (categoryLoading || productsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg">Loading...</div>
@@ -69,7 +50,7 @@ const ManagementPage: React.FC = () => {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{products.length}</div>
+              <div className="text-2xl font-bold">{products?.length}</div>
             </CardContent>
           </Card>
 
@@ -79,7 +60,7 @@ const ManagementPage: React.FC = () => {
               <Grid3X3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{categories.length}</div>
+              <div className="text-2xl font-bold">{categories?.length}</div>
             </CardContent>
           </Card>
 
@@ -108,13 +89,13 @@ const ManagementPage: React.FC = () => {
                 <TabsTrigger value="add-product">Add Product</TabsTrigger>
                 <TabsTrigger value="add-category">Add Category</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="add-product" className="mt-6">
                 <div className="max-w-2xl">
                   <AddProductForm onSuccess={handleProductAdded} />
                 </div>
               </TabsContent>
-              
+
               <TabsContent value="add-category" className="mt-6">
                 <div className="max-w-2xl">
                   <AddCategoryForm onSuccess={handleCategoryAdded} />

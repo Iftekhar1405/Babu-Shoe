@@ -9,50 +9,20 @@ import { BillDrawer } from '@/components/BillDrawer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, Grid3X3, ShoppingBag, TrendingUp } from 'lucide-react';
 import { Category, Product, ProductDetail } from '@/types';
-import { apiClient } from '@/lib/api';
 import { handlePrintBill } from '@/components/handlePrintBill';
+import { useCategories, useProducts } from '@/lib/api-advance';
 
 export default function Dashboard() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [products, setProducts] = useState<Product<true>[]>([]);
-  const [searchResults, setSearchResults] = useState<Product<true>[]>([]);
   const [billItems, setBillItems] = useState<ProductDetail[]>([]);
   const [isBillOpen, setIsBillOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    fetchData();
-  }, []);
 
-  const fetchData = async () => {
-    try {
-      const [categoriesData, productsData] = await Promise.all([
-        apiClient.getCategories(),
-        apiClient.getProducts()
-      ]);
-      setCategories(categoriesData);
-      setProducts(productsData);
-    } catch (error) {
-      console.error('Failed to fetch data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { data: categories, isLoading: categoryLoading, refetch: categoryRefetch } = useCategories()
+  const { data: products, isLoading: productsLoading, refetch: productsRefetch } = useProducts({ search: searchQuery })
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
-    if (query.trim()) {
-      try {
-        const results = await apiClient.searchProducts(query);
-        setSearchResults(results);
-      } catch (error) {
-        console.error('Search failed:', error);
-        setSearchResults([]);
-      }
-    } else {
-      setSearchResults([]);
-    }
   };
 
   const handleAddToBill = (product: Product) => {
@@ -97,7 +67,7 @@ export default function Dashboard() {
 
 
 
-  if (isLoading) {
+  if (categoryLoading || productsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg">Loading...</div>
@@ -127,7 +97,7 @@ export default function Dashboard() {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{products.length}</div>
+              <div className="text-2xl font-bold">{products?.length}</div>
               <p className="text-xs text-muted-foreground">
                 +2 from last month
               </p>
@@ -140,7 +110,7 @@ export default function Dashboard() {
               <Grid3X3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{categories.length}</div>
+              <div className="text-2xl font-bold">{categories?.length}</div>
               <p className="text-xs text-muted-foreground">
                 Active categories
               </p>
@@ -183,13 +153,13 @@ export default function Dashboard() {
               </h2>
             </div>
 
-            {searchResults.length === 0 ? (
+            {searchQuery && products?.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-gray-500">No products found for your search.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {searchResults.map((product) => (
+                {products?.map((product) => (
                   <ProductCard
                     key={product._id}
                     product={product}
@@ -206,7 +176,7 @@ export default function Dashboard() {
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Categories</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {categories.slice(0, 4).map((category) => (
+                {categories?.slice(0, 4).map((category) => (
                   <CategoryCard key={category._id} category={category} />
                 ))}
               </div>
@@ -216,7 +186,7 @@ export default function Dashboard() {
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Products</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {products.slice(0, 8).map((product) => (
+                {products?.slice(0, 8).map((product) => (
                   <ProductCard
                     key={product._id}
                     product={product}

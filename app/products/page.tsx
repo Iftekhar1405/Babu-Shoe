@@ -10,25 +10,21 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, ShoppingBag } from 'lucide-react';
 import { Category, Product, ProductDetail } from '@/types';
-import { apiClient } from '@/lib/api';
 import { handlePrintBill } from '@/components/handlePrintBill';
+import { useCategories, useProducts } from '@/lib/api-advance';
 
 export default function ProductsPage() {
   const searchParams = useSearchParams();
   const categoryId = searchParams.get('category');
-
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [products, setProducts] = useState<Product<true>[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product<true>[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryId || 'all');
   const [billItems, setBillItems] = useState<ProductDetail[]>([]);
   const [isBillOpen, setIsBillOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    fetchInitialData();
-  }, []);
+  const { data: categories, isLoading: categoryLoading, refetch: categoryRefetch } = useCategories()
+  const { data: products, isLoading: productsLoading, refetch: productsRefetch } = useProducts()
+
 
   useEffect(() => {
     if (categoryId) {
@@ -40,33 +36,21 @@ export default function ProductsPage() {
     filterProducts();
   }, [products, selectedCategory, searchQuery]);
 
-  const fetchInitialData = async () => {
-    try {
-      const [categoriesData, productsData] = await Promise.all([
-        apiClient.getCategories(),
-        apiClient.getProducts()
-      ]);
-      setCategories(categoriesData);
-      setProducts(productsData);
-    } catch (error) {
-      console.error('Failed to fetch data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const filterProducts = () => {
-    let filtered = products;
+    if (!products) return
+
+    let filtered: Product<true>[] = products;
 
     // Filter by category
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(product => product.categoryId._id === selectedCategory);
+      filtered = filtered?.filter(product => product?.categoryId?._id === selectedCategory);
     }
 
     // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(product =>
+      filtered = filtered?.filter(product =>
         product.name.toLowerCase().includes(query) ||
         product.articleNo.toLowerCase().includes(query)
       );
@@ -116,11 +100,13 @@ export default function ProductsPage() {
   };
 
   const getCategoryName = (id: string) => {
+    if (!categories) return
+
     const category = categories.find(cat => cat._id === id);
     return category ? category.name : 'Unknown Category';
   };
 
-  if (isLoading) {
+  if (categoryLoading || productsLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-lg">Loading...</div>
@@ -174,7 +160,7 @@ export default function ProductsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
-                  {categories.length && categories.map((category) => (
+                  {categories?.length && categories.map((category) => (
                     <SelectItem key={category._id} value={category._id || ''}>
                       {category.name}
                     </SelectItem>
