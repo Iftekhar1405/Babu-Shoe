@@ -172,7 +172,7 @@ export function BillDrawer({
             <h2 className="text-xl font-bold text-gray-900">Bill Summary</h2>
             {localItems.length > 0 && (
               <p className="text-sm text-gray-600 mt-1">
-                {totalItems} item{totalItems !== 1 ? 's' : ''} • ${total.toFixed(2)}
+                {totalItems} item{totalItems !== 1 ? 's' : ''} • ₹{total.toFixed(2)}
               </p>
             )}
           </div>
@@ -218,7 +218,7 @@ export function BillDrawer({
                           </h4>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-xs text-gray-500">
-                              ${item.productId.price.toFixed(2)} each
+                              ₹{item.productId.price.toFixed(2)} each
                             </span>
                             <Badge variant="outline" className="text-xs px-2 py-0">
                               Art: {item.productId.articleNo}
@@ -288,7 +288,7 @@ export function BillDrawer({
                         <div className="flex items-center justify-between">
                           <div className="text-left">
                             <div className="text-xs text-gray-500">
-                              ${(item.productId.price * item.quantity).toFixed(2)}
+                              ₹{(item.productId.price * item.quantity).toFixed(2)}
                               {item.discountPercent > 0 && (
                                 <span className="text-green-600 ml-1">
                                   (-{item.discountPercent}%)
@@ -296,7 +296,7 @@ export function BillDrawer({
                               )}
                             </div>
                             <div className="text-sm font-bold text-gray-900">
-                              Total: ${item.finalPrice.toFixed(2)}
+                              Total: ₹{item.finalPrice.toFixed(2)}
                             </div>
                           </div>
                           <Button
@@ -325,19 +325,19 @@ export function BillDrawer({
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600">Subtotal:</span>
                 <span className="font-medium">
-                  ${localItems.reduce((sum, item) => sum + (item.productId.price * item.quantity), 0).toFixed(2)}
+                  ₹{localItems.reduce((sum, item) => sum + (item.productId.price * item.quantity), 0).toFixed(2)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600">Total Discount:</span>
                 <span className="font-medium text-green-600">
-                  -${(localItems.reduce((sum, item) => sum + (item.productId.price * item.quantity), 0) - total).toFixed(2)}
+                  -₹{(localItems.reduce((sum, item) => sum + (item.productId.price * item.quantity), 0) - total).toFixed(2)}
                 </span>
               </div>
               <Separator />
               <div className="flex items-center justify-between">
                 <span className="text-lg font-bold text-gray-900">Final Total:</span>
-                <span className="text-xl font-bold text-gray-900">${total.toFixed(2)}</span>
+                <span className="text-xl font-bold text-gray-900">₹{total.toFixed(2)}</span>
               </div>
             </div>
 
@@ -441,7 +441,7 @@ export function BillDrawer({
               </div>
               <div className="flex items-center justify-between text-lg font-bold mt-1">
                 <span>Total Amount:</span>
-                <span>${total.toFixed(2)}</span>
+                <span>₹{total.toFixed(2)}</span>
               </div>
             </div>
           </div>

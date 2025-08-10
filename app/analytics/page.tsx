@@ -24,7 +24,7 @@ export default function AnalyticsPage() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$45,231</div>
+              <div className="text-2xl font-bold">₹45,231</div>
               <p className="text-xs text-muted-foreground">
                 +20.1% from last month
               </p>
@@ -110,10 +110,10 @@ export default function AnalyticsPage() {
           <CardContent>
             <div className="space-y-4">
               {[
-                { name: 'Wireless Headphones', sales: 234, revenue: '$69,930' },
-                { name: 'Smartphone', sales: 187, revenue: '$149,613' },
-                { name: 'Running Shoes', sales: 156, revenue: '$24,944' },
-                { name: 'Cotton T-Shirt', sales: 143, revenue: '$4,287' },
+                { name: 'Wireless Headphones', sales: 234, revenue: '₹69,930' },
+                { name: 'Smartphone', sales: 187, revenue: '₹149,613' },
+                { name: 'Running Shoes', sales: 156, revenue: '₹24,944' },
+                { name: 'Cotton T-Shirt', sales: 143, revenue: '₹4,287' },
               ].map((product, index) => (
                 <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div>

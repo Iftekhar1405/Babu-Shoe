@@ -188,7 +188,7 @@ export default function OrdersPage() {
                           <span className="ml-2 capitalize">{order.status}</span>
                         </Badge>
                       </TableCell>
-                      <TableCell>${calculateTotalAmount(order.productDetails).toFixed(2)}</TableCell>
+                      <TableCell>₹{calculateTotalAmount(order.productDetails).toFixed(2)}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="sm">
                           <Eye className="h-4 w-4" />

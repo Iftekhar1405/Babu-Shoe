@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { X, Plus, Upload, Loader2, Check, Image as ImageIcon } from 'lucide-react';
-import { useCategories, useCreateProduct } from '@/lib/api-advance';
+import { useCategories, useCreateProduct, useUploadImages, useUploadImagesLegacy } from '@/lib/api-advance';
 import { Product, ColorData } from '@/types';
 import { toast } from 'sonner';
 
@@ -65,6 +65,8 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
     }
   });
 
+  const { mutateAsync, isPending } = useUploadImagesLegacy();
+
   const {
     register,
     handleSubmit,
@@ -93,19 +95,10 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
       formData.append('images', files[0]); // Only upload first file for main image
       formData.append('color', 'main'); // Use 'main' as identifier for main image
 
-      const response = await fetch('http://localhost:8080/api/upload/images-legacy', {
-        method: 'POST',
-        body: formData,
-      });
 
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
-      }
-
-      const result = await response.json();
+      const result = await mutateAsync(formData);
       const uploadedUrls = Array.isArray(result) ? result :
-        result.urls ? result.urls :
-          result.images ? result.images : [];
+        result.urls ? result.urls : [];
 
       if (uploadedUrls.length > 0) {
         const imageUrl = uploadedUrls[0];
@@ -167,19 +160,11 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
       });
       formData.append('color', colorData.colorName.trim());
 
-      const response = await fetch('http://localhost:8080/api/upload/images-legacy', {
-        method: 'POST',
-        body: formData,
-      });
 
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
-      }
 
-      const result = await response.json();
+      const result = await mutateAsync(formData);
       const uploadedUrls = Array.isArray(result) ? result :
-        result.urls ? result.urls :
-          result.images ? result.images : [];
+        result.urls ? result.urls : [];
 
       setColors(prev => prev.map(item =>
         item.id === colorId
@@ -312,7 +297,6 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
                           <Check className="w-4 h-4" />
                           <span className="text-sm">Main image uploaded successfully</span>
                         </div>
-                        <p className="text-xs text-gray-500 truncate">{mainImageUrl}</p>
                       </div>
                       <button
                         type="button"
@@ -342,7 +326,7 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
               </div>
 
               <div>
-                <Label>Price ($)</Label>
+                <Label>Price (₹)</Label>
                 <Input type="number" step="0.01" {...register('price', { valueAsNumber: true })} placeholder="0.00" />
                 {errors.price && <p className="text-red-500 text-xs">{errors.price.message}</p>}
               </div>

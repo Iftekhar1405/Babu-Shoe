@@ -135,7 +135,7 @@ export function ProductCard({ product, onAddToBill }: ProductCardProps) {
                 Art. {product.articleNo}
               </p>
               <p className="text-2xl font-bold text-black">
-                ${product.price.toFixed(2)}
+                ₹{product.price.toFixed(2)}
               </p>
             </div>
           </div>
@@ -354,7 +354,7 @@ export function ProductCard({ product, onAddToBill }: ProductCardProps) {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-2xl font-bold text-black">${product.price.toFixed(2)}</p>
+                          <p className="text-2xl font-bold text-black">₹{product.price.toFixed(2)}</p>
                           <Badge variant={product.inStock ? "default" : "destructive"} className="mt-1">
                             {product.inStock ? "In Stock" : "Out of Stock"}
                           </Badge>
@@ -498,7 +498,7 @@ export function ProductCard({ product, onAddToBill }: ProductCardProps) {
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600">Unit Price:</span>
-                          <span className="font-medium">${product.price.toFixed(2)}</span>
+                          <span className="font-medium">₹{product.price.toFixed(2)}</span>
                         </div>
 
                         {quantity > 1 && (
@@ -512,7 +512,7 @@ export function ProductCard({ product, onAddToBill }: ProductCardProps) {
                           <div className="flex justify-between items-center">
                             <span className="font-semibold text-gray-900">Total:</span>
                             <span className="text-2xl font-bold text-black">
-                              ${(product.price * quantity).toFixed(2)}
+                              ₹{(product.price * quantity).toFixed(2)}
                             </span>
                           </div>
                         </div>
@@ -527,7 +527,7 @@ export function ProductCard({ product, onAddToBill }: ProductCardProps) {
                         disabled={!selectedSize || !selectedColor}
                       >
                         <ShoppingCart className="h-5 w-5 mr-2" />
-                        Add to Bill • ${(product.price * quantity).toFixed(2)}
+                        Add to Bill • ₹{(product.price * quantity).toFixed(2)}
                       </Button>
 
                       <Button
@@ -541,23 +541,23 @@ export function ProductCard({ product, onAddToBill }: ProductCardProps) {
 
                     {/* Selection Summary */}
                     {(selectedColor || selectedSize) && (
-                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                        <p className="text-sm font-medium text-blue-900 mb-1">Your Selection:</p>
-                        <div className="text-sm text-blue-800 space-y-1">
+                      <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                        <p className="text-sm font-medium text-gray-900 mb-1">Your Selection:</p>
+                        <div className="text-sm text-gray-800 space-y-1">
                           {selectedColor && (
                             <div className="flex items-center space-x-2">
-                              <span className="w-3 h-3 bg-blue-600 rounded-full"></span>
+                              <span className="w-3 h-3 bg-gray-600 rounded-full"></span>
                               <span>Color: {selectedColor.color}</span>
                             </div>
                           )}
                           {selectedSize && (
                             <div className="flex items-center space-x-2">
-                              <span className="w-3 h-3 bg-blue-600 rounded-full"></span>
+                              <span className="w-3 h-3 bg-gray-600 rounded-full"></span>
                               <span>Size: {selectedSize}</span>
                             </div>
                           )}
                           <div className="flex items-center space-x-2">
-                            <span className="w-3 h-3 bg-blue-600 rounded-full"></span>
+                            <span className="w-3 h-3 bg-gray-600 rounded-full"></span>
                             <span>Quantity: {quantity}</span>
                           </div>
                         </div>

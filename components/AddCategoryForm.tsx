@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useCreateCategory, useUploadImages } from '@/lib/api-advance';
+import { useCreateCategory, useUploadImages, useUploadImagesLegacy } from '@/lib/api-advance';
 
 const categorySchema = z.object({
   name: z.string().min(1, 'Category name is required').max(100, 'Name too long'),
@@ -26,7 +26,7 @@ export function AddCategoryForm({ onSuccess }: AddCategoryFormProps) {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  const { mutateAsync, isPending } = useUploadImages();
+  const { mutateAsync, isPending } = useUploadImagesLegacy();
   const { mutate } = useCreateCategory()
 
 
@@ -67,6 +67,7 @@ export function AddCategoryForm({ onSuccess }: AddCategoryFormProps) {
 
       const uploadResponse = await mutateAsync(formData);
 
+      console.log(uploadResponse)
 
       const categoryData = {
         name: data?.name,

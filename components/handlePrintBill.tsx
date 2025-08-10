@@ -3,15 +3,15 @@ import { BillItem } from "@/types";
 
 export const handlePrintBill = (billItems: BillItem[], defaultCompanyInfo = DETAILS.COMPANY_INFO) => {
 
-    const billDate = new Date().toLocaleDateString();
-    const billTime = new Date().toLocaleTimeString();
-    const billNumber = `INV-${Date.now()}`;
+  const billDate = new Date().toLocaleDateString();
+  const billTime = new Date().toLocaleTimeString();
+  const billNumber = `INV-${Date.now()}`;
 
-    const subtotal = billItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
-    const totalDiscount = billItems.reduce((sum, item) => sum + ((item.product.price * item.quantity) * (item.discount / 100)), 0);
-    const finalTotal = billItems.reduce((sum, item) => sum + item.finalPrice, 0);
+  const subtotal = billItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+  const totalDiscount = billItems.reduce((sum, item) => sum + ((item.product.price * item.quantity) * (item.discount / 100)), 0);
+  const finalTotal = billItems.reduce((sum, item) => sum + item.finalPrice, 0);
 
-    const billHTML = `
+  const billHTML = `
       <!DOCTYPE html>
       <html lang="en">
       <head>
@@ -243,9 +243,9 @@ export const handlePrintBill = (billItems: BillItem[], defaultCompanyInfo = DETA
                   <td>${item.product.articleNo}</td>
                   <td><strong>${item.product.name}</strong></td>
                   <td class="text-center">${item.quantity}</td>
-                  <td class="text-right">$${item.product.price.toFixed(2)}</td>
+                  <td class="text-right">₹${item.product.price.toFixed(2)}</td>
                   <td class="text-center">${item.discount}%</td>
-                  <td class="text-right"><strong>$${item.finalPrice.toFixed(2)}</strong></td>
+                  <td class="text-right"><strong>₹${item.finalPrice.toFixed(2)}</strong></td>
                 </tr>
               `).join('')}
             </tbody>
@@ -256,15 +256,15 @@ export const handlePrintBill = (billItems: BillItem[], defaultCompanyInfo = DETA
             <table class="totals-table">
               <tr class="subtotal-row">
                 <td><strong>Subtotal:</strong></td>
-                <td class="text-right"><strong>$${subtotal.toFixed(2)}</strong></td>
+                <td class="text-right"><strong>₹${subtotal.toFixed(2)}</strong></td>
               </tr>
               <tr class="discount-row">
                 <td><strong>Total Discount:</strong></td>
-                <td class="text-right"><strong>-$${totalDiscount.toFixed(2)}</strong></td>
+                <td class="text-right"><strong>-₹${totalDiscount.toFixed(2)}</strong></td>
               </tr>
               <tr class="total-row">
                 <td><strong>TOTAL:</strong></td>
-                <td class="text-right"><strong>$${finalTotal.toFixed(2)}</strong></td>
+                <td class="text-right"><strong>₹${finalTotal.toFixed(2)}</strong></td>
               </tr>
             </table>
           </div>
@@ -284,20 +284,20 @@ export const handlePrintBill = (billItems: BillItem[], defaultCompanyInfo = DETA
       </html>
     `;
 
-    // Open print window
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
-    if (printWindow) {
-        printWindow.document.write(billHTML);
-        printWindow.document.close();
+  // Open print window
+  const printWindow = window.open('', '_blank', 'width=800,height=600');
+  if (printWindow) {
+    printWindow.document.write(billHTML);
+    printWindow.document.close();
 
-        // Wait for content to load before printing
-        printWindow.onload = () => {
-            setTimeout(() => {
-                printWindow.print();
-                printWindow.close();
-            }, 250);
-        };
-    } else {
-        alert('Please allow popup windows to print the bill.');
-    }
+    // Wait for content to load before printing
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 250);
+    };
+  } else {
+    alert('Please allow popup windows to print the bill.');
+  }
 };
