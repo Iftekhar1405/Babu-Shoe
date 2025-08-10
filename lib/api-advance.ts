@@ -7,7 +7,7 @@ import {
     UseInfiniteQueryOptions,
     useInfiniteQuery
 } from '@tanstack/react-query';
-import { Category, Product, ApiResponse, Order } from '@/types';
+import { Category, Product, ApiResponse, Order, Company } from '@/types';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
@@ -29,6 +29,10 @@ export const queryKeys = {
     // Orders
     orders: () => [...queryKeys.all, 'orders'] as const,
     order: (id: string) => [...queryKeys.orders(), id] as const,
+
+    //company
+    companies: () => [...queryKeys.all, 'companies'] as const,
+    company: (id: string) => [...queryKeys.companies(), id] as const,
 } as const;
 
 // Types for better type safety
@@ -51,13 +55,16 @@ interface PaginatedResponse<T> {
 
 // Enhanced API Client with better error handling and types
 class ApiClient {
-    private async request<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
+    private async request<T, Wrapped extends boolean = true>(
+        endpoint: string,
+        options?: RequestInit
+    ): Promise<Wrapped extends true ? ApiResponse<T> : T> {
         const url = `${API_BASE_URL}${endpoint}`;
 
         try {
             const response = await fetch(url, {
                 headers: {
-                    'Content-Type': 'application/json',
+                    "Content-Type": "application/json",
                     ...options?.headers,
                 },
                 ...options,
@@ -72,13 +79,15 @@ class ApiClient {
                 );
             }
 
-            return await response.json();
+            return (await response.json()) as Wrapped extends true
+                ? ApiResponse<T>
+                : T;
         } catch (error) {
             if (error instanceof ApiError) {
                 throw error;
             }
-            console.error('API request failed:', error);
-            throw new ApiError('Network error occurred', 0, { originalError: error });
+            console.error("API request failed:", error);
+            throw new ApiError("Network error occurred", 0, { originalError: error });
         }
     }
 
@@ -86,6 +95,11 @@ class ApiClient {
     async getCategories(): Promise<Category[]> {
         const response = await this.request<Category[]>('/categories');
         return response.data;
+    }
+
+    async getCompanies(): Promise<Company[]> {
+        const response = await this.request<Company[], false>('/companies');
+        return response;
     }
 
     async getCategoryById(id: string): Promise<Category> {
@@ -97,6 +111,14 @@ class ApiClient {
         const response = await this.request<Category>('/categories', {
             method: 'POST',
             body: JSON.stringify(category),
+        });
+        return response.data;
+    }
+
+    async createCompany(Company: Partial<Company>): Promise<Company> {
+        const response = await this.request<Company>('/companies', {
+            method: 'POST',
+            body: JSON.stringify(Company),
         });
         return response.data;
     }

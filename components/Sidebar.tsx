@@ -14,7 +14,8 @@ import {
   Menu,
   ShoppingBag,
   BarChart3,
-  Users
+  Users,
+  Factory
 } from 'lucide-react';
 import { DETAILS } from '@/public/details'
 
@@ -28,6 +29,11 @@ const navigation = [
     name: 'Products',
     href: '/products',
     icon: Package,
+  },
+  {
+    name: 'Companies',
+    href: '/companies',
+    icon: Factory,
   },
   {
     name: 'Categories',

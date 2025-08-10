@@ -6,6 +6,14 @@ export interface Category {
   updatedAt?: string;
 }
 
+export interface Company {
+  _id?: string;
+  name: string;
+  logo: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export interface ColorData {
   _id?: string;
   color?: string;
