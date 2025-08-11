@@ -7,7 +7,7 @@ import {
     UseInfiniteQueryOptions,
     useInfiniteQuery
 } from '@tanstack/react-query';
-import { Category, Product, ApiResponse, Order, Company } from '@/types';
+import { Category, Product, ApiResponse, Order, Company, Tag } from '@/types';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
@@ -25,6 +25,7 @@ export const queryKeys = {
     productsByCategory: (categoryId: string) => [...queryKeys.products(), 'category', categoryId] as const,
     product: (id: string) => [...queryKeys.products(), id] as const,
     productSearch: (query: string) => [...queryKeys.products(), 'search', query] as const,
+    productTags: () => [...queryKeys.products(), 'tags'],
 
     // Orders
     orders: () => [...queryKeys.all, 'orders'] as const,
@@ -220,6 +221,19 @@ class ApiClient {
         return response.json();
     }
 
+    async createTag(tag: Partial<Tag>): Promise<Tag> {
+        const response = await this.request<Tag, false>('/products/tag', {
+            method: 'POST',
+            body: JSON.stringify(tag),
+        });
+        return response;
+    }
+
+    async getTags(): Promise<Tag[]> {
+        const response = await this.request<Tag[], false>('/products/tags');
+        return response;
+    }
+
     // Orders
     async getOrders(): Promise<Order<true>[]> {
         const response = await this.request<Order<true>[]>('/orders');
@@ -307,6 +321,18 @@ export const useProducts = <TData = Product<true>[]>(
     return useQuery({
         queryKey: queryKeys.productsList(filters),
         queryFn: () => apiClient.getProducts(filters),
+        staleTime: 2 * 60 * 1000, // 2 minutes
+        gcTime: 5 * 60 * 1000,
+        ...options,
+    });
+};
+
+export const useTags = <TData = Tag[]>(
+    options?: Omit<UseQueryOptions<Tag[], ApiError, TData>, 'queryKey' | 'queryFn'>
+) => {
+    return useQuery({
+        queryKey: queryKeys.productTags(),
+        queryFn: () => apiClient.getTags(),
         staleTime: 2 * 60 * 1000, // 2 minutes
         gcTime: 5 * 60 * 1000,
         ...options,
@@ -528,6 +554,25 @@ export const useUploadImagesLegacy = (
 ) => {
     return useMutation({
         mutationFn: (formData: FormData) => apiClient.uploadImagesLegacy(formData),
+        ...options,
+    });
+};
+
+export const useCreateTag = (
+    options?: UseMutationOptions<Tag, ApiError, Partial<Tag>>
+) => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (tag: Partial<Tag>) =>
+            apiClient.createTag(tag),
+        onSuccess: (tag) => {
+            // Invalidate products lists
+            queryClient.invalidateQueries({ queryKey: queryKeys.productTags() });
+
+            // Set the new product in cache
+            queryClient.setQueryData(queryKeys.product(tag._id || ''), tag);
+        },
         ...options,
     });
 };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -11,9 +11,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { X, Plus, Upload, Loader2, Check, Image as ImageIcon } from 'lucide-react';
-import { useCategories, useCreateProduct, useUploadImages, useUploadImagesLegacy } from '@/lib/api-advance';
+import { useCategories, useCreateProduct, useCreateTag, useTags, useUploadImagesLegacy } from '@/lib/api-advance';
 import { Product, ColorData } from '@/types';
 import { toast } from 'sonner';
+import { useCompanies } from '@/lib/company.service';
 
 const productSchema = z.object({
   name: z.string().min(1, 'Product name is required').max(200, 'Name too long'),
@@ -46,12 +47,15 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
   const [colors, setColors] = useState<ColorFormData[]>([
     { id: '1', colorName: '', urls: [], isUploading: false, availableSize: [] }
   ]);
-  const [tagOptions, setTagOptions] = useState<{ label: string; value: string }[]>([]);
   const [selectedTags, setSelectedTags] = useState<{ label: string; value: string }[]>([]);
   const [mainImageUrl, setMainImageUrl] = useState<string>('');
   const [isUploadingMainImage, setIsUploadingMainImage] = useState<boolean>(false);
 
   const { data: categories } = useCategories();
+  const { data: tags, isLoading: tagsLoading } = useTags()
+  const { data: companies } = useCompanies()
+
+
   const { mutate, isPending: isSubmitting } = useCreateProduct({
     onSuccess: () => {
       onSuccess();
@@ -65,7 +69,14 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
     }
   });
 
-  const { mutateAsync, isPending } = useUploadImagesLegacy();
+  const { mutateAsync } = useUploadImagesLegacy();
+  const { mutateAsync: createTags } = useCreateTag()
+
+  const tagsOptions = useMemo(() => {
+    if (!tagsLoading && tags && tags.length) {
+      return tags.map(t => ({ label: t.name, value: t._id }))
+    }
+  }, [tags, tagsLoading])
 
   const {
     register,
@@ -190,6 +201,16 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
         : item
     ));
   };
+
+  const handleCreateTag = async (name: string) => {
+    const createdTag = await createTags({ name })
+
+    if (createdTag && createdTag._id && createdTag.name) {
+      setSelectedTags(prev => [...prev, { label: createdTag.name, value: createdTag._id || '' }])
+      setValue('tags', [...selectedTags.map(s => s.value), createdTag._id]);
+    }
+
+  }
 
   const onSubmit = async (data: ProductFormData) => {
     console.log('Form data:', data);
@@ -349,9 +370,30 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
               </div>
 
               <div>
-                <Label>Company ID</Label>
-                <Input {...register('companyId')} placeholder="Enter company ID" />
-                {errors.companyId && <p className="text-red-500 text-xs">{errors.companyId.message}</p>}
+                <Label>Company</Label>
+                <Select onValueChange={(value) => setValue('companyId', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Company" />
+                  </SelectTrigger><SelectContent>
+                    {companies?.map((c) => (
+                      <SelectItem
+                        key={c._id}
+                        value={c._id || ""}
+                        className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={c.logo}
+                            alt={c.name}
+                            className="w-6 h-6 rounded-full object-cover border border-gray-300"
+                          />
+                          <span className="truncate">{c.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+
+                </Select>
               </div>
 
               <div>
@@ -389,14 +431,8 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
                     setSelectedTags(tags);
                     setValue('tags', tags.map((v: any) => v.value));
                   }}
-                  options={tagOptions}
-                  onCreateOption={(inputValue: string) => {
-                    const newOption = { label: inputValue, value: inputValue };
-                    setTagOptions(prev => [...prev, newOption]);
-                    const newTags = [...selectedTags, newOption];
-                    setSelectedTags(newTags);
-                    setValue('tags', newTags.map(t => t.value));
-                  }}
+                  options={tagsOptions}
+                  onCreateOption={(inputValue: string) => handleCreateTag(inputValue)}
                   placeholder="Add tags..."
                 />
                 {errors.tags && <p className="text-red-500 text-xs">{errors.tags.message}</p>}

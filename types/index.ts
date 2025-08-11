@@ -119,3 +119,9 @@ export type CreateOrder = {
   paidAt?: string; // ISO Date string
   comments?: Comment[];
 };
+
+
+export type Tag = {
+  _id?: string,
+  name: string,
+}
