@@ -103,7 +103,7 @@ export function BillDrawer({
   };
 
   const getColorImage = (product: Product<true>, colorName: string) => {
-    const colorData = product.colors.find((c: ColorData) => c?.color === colorName);
+    const colorData = product.colors.find((c: ColorData | undefined) => c?.color === colorName);
     return colorData?.urls?.[0] || product.image;
   };
 
