@@ -20,7 +20,7 @@ export interface ColorData {
   urls?: string[];
   availableSize?: string[]
 }
-export interface Product<e extends boolean = true> {
+export interface Product<e = true> {
   _id?: string;
   name: string;
   image: string;
