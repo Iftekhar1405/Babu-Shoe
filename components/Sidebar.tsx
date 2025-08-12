@@ -7,6 +7,13 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Home,
   Package,
   Grid3X3,
@@ -15,9 +22,13 @@ import {
   ShoppingBag,
   BarChart3,
   Users,
-  Factory
+  Factory,
+  LogOut,
+  User as UserIcon
 } from 'lucide-react';
-import { DETAILS } from '@/public/details'
+import { DETAILS } from '@/public/details';
+import { useAuth } from '@/lib/auth-hooks';
+import { useLogout } from '@/lib/auth-hooks';
 
 const navigation = [
   {
@@ -68,6 +79,12 @@ interface SidebarProps {
 
 export function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname();
+  const { user, isAuthenticated } = useAuth();
+  const logoutMutation = useLogout();
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
@@ -103,17 +120,64 @@ export function Sidebar({ className }: SidebarProps) {
         })}
       </nav>
 
-      {/* Footer */}
+      {/* Footer with User Info */}
       <div className="border-t p-4">
-        <div className="flex items-center space-x-3 px-3 py-2">
-          <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-            <Users className="h-4 w-4 text-gray-600" />
+        {isAuthenticated && user ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="w-full justify-start h-auto p-3">
+                <div className="flex items-center space-x-3 w-full">
+                  <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                    <UserIcon className="h-4 w-4 text-gray-600" />
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {user.name}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {user.phoneNumber}
+                    </p>
+                    <p className="text-xs text-blue-600 capitalize">
+                      {user.role}
+                    </p>
+                  </div>
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem asChild>
+                <Link href="/profile" className="w-full cursor-pointer">
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  Profile
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/settings" className="w-full cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleLogout}
+                disabled={logoutMutation.isPending}
+                className="text-red-600 cursor-pointer"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                {logoutMutation.isPending ? 'Logging out...' : 'Logout'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <div className="flex items-center space-x-3 px-3 py-2">
+            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+              <UserIcon className="h-4 w-4 text-gray-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-500">Not logged in</p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">Admin User</p>
-            <p className="text-xs text-gray-500 truncate">admin@example.com</p>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

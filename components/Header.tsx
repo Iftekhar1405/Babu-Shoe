@@ -2,8 +2,17 @@
 
 import { SearchBar } from '@/components/SearchBar';
 import { Button } from '@/components/ui/button';
-import { ShoppingBag, Bell, User, Search, Menu } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { ShoppingBag, Bell, User, Search, Menu, LogOut, Settings } from 'lucide-react';
 import { useState } from 'react';
+import Link from 'next/link';
+import { useAuth, useLogout } from '@/lib/auth-hooks';
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
@@ -21,6 +30,12 @@ export function Header({
   onMenuToggle
 }: HeaderProps) {
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+  const logoutMutation = useLogout();
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-30 lg:pl-64">
@@ -48,26 +63,26 @@ export function Header({
           </div>
 
           {/* Right Actions */}
-          <div className="flex items-center">
+          <div className="flex items-center space-x-2">
             {/* Mobile Search Toggle */}
             {showSearch && onSearch && (
               <Button
                 onClick={() => setShowMobileSearch(!showMobileSearch)}
                 variant="ghost"
                 size="sm"
-                className="sm:hidden p-2 mr-1"
+                className="sm:hidden p-2"
               >
                 <Search className="h-5 w-5" />
               </Button>
             )}
 
             {/* Bill Button */}
-            {onOpenBill && (
+            {onOpenBill && isAuthenticated && (
               <Button
                 onClick={onOpenBill}
                 variant="outline"
                 size="sm"
-                className="relative border-gray-300 hover:bg-gray-50 mr-2 sm:mr-3"
+                className="relative border-gray-300 hover:bg-gray-50"
               >
                 <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
                 <span className="hidden xs:inline">Bill</span>
@@ -75,10 +90,80 @@ export function Header({
               </Button>
             )}
 
-            {/* User Profile */}
-            <Button variant="ghost" size="sm" className="p-2">
-              <User className="h-4 w-4 sm:h-5 sm:w-5" />
-            </Button>
+            {/* Notifications */}
+            {isAuthenticated && (
+              <Button variant="ghost" size="sm" className="p-2 relative">
+                <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
+                {/* Notification badge */}
+                <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+              </Button>
+            )}
+
+            {/* User Profile Dropdown */}
+            {isAuthenticated && user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="p-2">
+                    <div className="flex items-center space-x-2">
+                      <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                        <User className="h-3 w-3 sm:h-4 sm:w-4 text-gray-600" />
+                      </div>
+                      <div className="hidden md:block text-left">
+                        <p className="text-sm font-medium text-gray-900 truncate max-w-24">
+                          {user.name}
+                        </p>
+                        <p className="text-xs text-gray-500 capitalize">
+                          {user.role}
+                        </p>
+                      </div>
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="px-3 py-2 border-b">
+                    <p className="text-sm font-medium text-gray-900">
+                      {user.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {user.phoneNumber}
+                    </p>
+                    <p className="text-xs text-blue-600 capitalize">
+                      {user.role}
+                    </p>
+                  </div>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="w-full cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings" className="w-full cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    disabled={logoutMutation.isPending}
+                    className="text-red-600 cursor-pointer"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    {logoutMutation.isPending ? 'Logging out...' : 'Logout'}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/auth/login">Sign in</Link>
+                </Button>
+                <Button asChild size="sm">
+                  <Link href="/auth/register">Sign up</Link>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 

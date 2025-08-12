@@ -1,6 +1,7 @@
+// app/page.tsx (Dashboard)
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Header } from '@/components/Header';
 import { PageHeader } from '@/components/PageHeader';
 import { CategoryCard } from '@/components/CategoryCard';
@@ -8,18 +9,19 @@ import { ProductCard } from '@/components/ProductCard';
 import { BillDrawer } from '@/components/BillDrawer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, Grid3X3, ShoppingBag, TrendingUp } from 'lucide-react';
-import { Category, Product, ProductDetail } from '@/types';
+import { Product, ProductDetail } from '@/types';
 import { handlePrintBill } from '@/components/handlePrintBill';
 import { useCategories, useProducts } from '@/lib/api-advance';
+import { AuthGuard } from '@/components/auth/AuthGuard';
+import { Sidebar } from '@/components/Sidebar';
 
-export default function Dashboard() {
+function DashboardContent() {
   const [billItems, setBillItems] = useState<ProductDetail[]>([]);
   const [isBillOpen, setIsBillOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-
-  const { data: categories, isLoading: categoryLoading, refetch: categoryRefetch } = useCategories()
-  const { data: products, isLoading: productsLoading, refetch: productsRefetch } = useProducts({ search: searchQuery })
+  const { data: categories, isLoading: categoryLoading } = useCategories();
+  const { data: products, isLoading: productsLoading } = useProducts({ search: searchQuery });
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
@@ -65,20 +67,16 @@ export default function Dashboard() {
     setBillItems([]);
   };
 
-
-
   if (categoryLoading || productsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-
-
       <Header
         onSearch={handleSearch}
         billItemsCount={billItems.length}
@@ -99,7 +97,7 @@ export default function Dashboard() {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{products?.length}</div>
+              <div className="text-2xl font-bold">{products?.length || 0}</div>
               <p className="text-xs text-muted-foreground">
                 +2 from last month
               </p>
@@ -112,7 +110,7 @@ export default function Dashboard() {
               <Grid3X3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{categories?.length}</div>
+              <div className="text-2xl font-bold">{categories?.length || 0}</div>
               <p className="text-xs text-muted-foreground">
                 Active categories
               </p>
@@ -212,5 +210,18 @@ export default function Dashboard() {
         onPrintBill={() => handlePrintBill(billItems)}
       />
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <AuthGuard requireAuth={true}>
+      <div className="min-h-screen bg-gray-50">
+        <Sidebar />
+        <main className="lg:pl-64">
+          <DashboardContent />
+        </main>
+      </div>
+    </AuthGuard>
   );
 }
