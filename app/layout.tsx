@@ -5,6 +5,8 @@ import { Sidebar } from '@/components/Sidebar';
 import { DETAILS } from '@/public/details';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './query-client';
+import { Toaster } from 'sonner'; // For notifications
+import { AuthProvider } from '@/context/auth-context';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -22,12 +24,15 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <QueryClientProvider client={queryClient}>
-          <div className="min-h-screen bg-gray-50">
-            <Sidebar />
-            <main className="lg:pl-64">
-              {children}
-            </main>
-          </div>
+          <AuthProvider>
+            <div className="min-h-screen bg-gray-50">
+              <Sidebar />
+              <main className="lg:pl-64">
+                {children}
+              </main>
+            </div>
+            <Toaster position="top-right" />
+          </AuthProvider>
         </QueryClientProvider>
       </body>
     </html>
