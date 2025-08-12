@@ -11,7 +11,7 @@ import { Category, Product, ApiResponse, Order, Company, Tag } from '@/types';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
-// Query Keys Factory - Industry standard approach for managing query keys
+
 export const queryKeys = {
     all: ['api'] as const,
 
