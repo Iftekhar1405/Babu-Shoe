@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, ShoppingBag } from 'lucide-react';
 import { Category, Product, ProductDetail } from '@/types';
 import { handlePrintBill } from '@/components/handlePrintBill';
-import { useCategories, useProducts } from '@/lib/api-advance';
+import { useCategories, useProducts, useProductSearch } from '@/lib/api-advance';
 
 export default function ProductsPage() {
   const searchParams = useSearchParams();
@@ -21,10 +21,17 @@ export default function ProductsPage() {
   const [billItems, setBillItems] = useState<ProductDetail[]>([]);
   const [isBillOpen, setIsBillOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchMode, setIsSearchMode] = useState(false);
 
-  const { data: categories, isLoading: categoryLoading, refetch: categoryRefetch } = useCategories()
-  const { data: products, isLoading: productsLoading, refetch: productsRefetch } = useProducts()
-
+  const { data: categories, isLoading: categoryLoading, refetch: categoryRefetch } = useCategories();
+  const { data: products, isLoading: productsLoading, refetch: productsRefetch } = useProducts();
+  
+  // Search results from API
+  const { 
+    data: searchResults, 
+    isLoading: searchLoading, 
+    error: searchError 
+  } = useProductSearch(searchQuery);
 
   useEffect(() => {
     if (categoryId) {
@@ -33,30 +40,38 @@ export default function ProductsPage() {
   }, [categoryId]);
 
   useEffect(() => {
-    filterProducts();
-  }, [products, selectedCategory, searchQuery]);
-
+    if (searchQuery.trim()) {
+      setIsSearchMode(true);
+      // When searching, use search results from API
+      if (searchResults && !searchLoading) {
+        setFilteredProducts(searchResults);
+      }
+    } else {
+      setIsSearchMode(false);
+      // When not searching, use regular filtering
+      filterProducts();
+    }
+  }, [products, selectedCategory, searchQuery, searchResults, searchLoading]);
 
   const filterProducts = () => {
-    if (!products) return
+    if (!products) return;
 
     let filtered: Product<true>[] = products;
 
-    // Filter by category
-    if (selectedCategory !== 'all') {
+    // Filter by category only when not in search mode
+    if (!isSearchMode && selectedCategory !== 'all') {
       filtered = filtered?.filter(product => product?.categoryId?._id === selectedCategory);
     }
 
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered?.filter(product =>
-        product.name.toLowerCase().includes(query) ||
-        product.articleNo.toLowerCase().includes(query)
-      );
-    }
-
     setFilteredProducts(filtered);
+  };
+
+  const handleSearchQueryChange = (query: string) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      setIsSearchMode(false);
+      setSelectedCategory('all'); // Reset category when clearing search
+    }
   };
 
   const handleAddToBill = (product: Product<true>) => {
@@ -100,10 +115,28 @@ export default function ProductsPage() {
   };
 
   const getCategoryName = (id: string) => {
-    if (!categories) return
+    if (!categories) return 'Unknown Category';
 
     const category = categories.find(cat => cat._id === id);
     return category ? category.name : 'Unknown Category';
+  };
+
+  const getResultsTitle = () => {
+    if (isSearchMode && searchQuery) {
+      if (searchLoading) {
+        return `Searching for "${searchQuery}"...`;
+      }
+      if (searchError) {
+        return `Search error for "${searchQuery}"`;
+      }
+      return `Search Results for "${searchQuery}" (${filteredProducts.length})`;
+    }
+    
+    if (selectedCategory === 'all') {
+      return `All Products (${filteredProducts.length})`;
+    }
+    
+    return `${getCategoryName(selectedCategory)} (${filteredProducts.length})`;
   };
 
   if (categoryLoading || productsLoading) {
@@ -131,7 +164,11 @@ export default function ProductsPage() {
             </div>
 
             <div className="flex-1 max-w-md mx-8">
-              <SearchBar onSearch={setSearchQuery} placeholder="Search products..." />
+              <SearchBar 
+                onSearch={handleSearchQueryChange} 
+                onAddToBill={handleAddToBill}
+                placeholder="Search products..." 
+              />
             </div>
 
             <div className="flex items-center space-x-4">
@@ -149,63 +186,103 @@ export default function ProductsPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Filters */}
-        <div className="mb-8">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <span className="text-sm font-medium text-gray-700">Filter by category:</span>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories?.length && categories.map((category) => (
-                    <SelectItem key={category._id} value={category._id || ''}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        {/* Filters - Hide category filter when searching */}
+        {!isSearchMode && (
+          <div className="mb-8">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-medium text-gray-700">Filter by category:</span>
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories?.length && categories.map((category) => (
+                      <SelectItem key={category._id} value={category._id || ''}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Search Mode Indicator */}
+        {isSearchMode && searchQuery && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="text-blue-800 font-medium">🔍 Search Mode Active</span>
+                <span className="text-blue-600">Showing search results for "{searchQuery}"</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleSearchQueryChange('')}
+                className="text-blue-800 hover:bg-blue-100"
+              >
+                Clear Search
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Results */}
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-900">
-            {selectedCategory === 'all'
-              ? `All Products (${filteredProducts.length})`
-              : `${getCategoryName(selectedCategory)} (${filteredProducts.length})`
-            }
-            {searchQuery && (
-              <span className="text-gray-500 font-normal"> - Search: "{searchQuery}"</span>
-            )}
+            {getResultsTitle()}
           </h2>
+          {searchError && (
+            <p className="text-red-500 text-sm mt-2">
+              Error loading search results. Please try again.
+            </p>
+          )}
         </div>
 
+        {/* Loading State */}
+        {searchLoading && isSearchMode && (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+            <p className="text-gray-500 mt-4">Searching products...</p>
+          </div>
+        )}
+
         {/* Products Grid */}
-        {filteredProducts.length === 0 ? (
+        {!searchLoading && filteredProducts.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500">
-              {searchQuery
-                ? "No products found matching your search criteria."
+              {isSearchMode && searchQuery
+                ? `No products found matching "${searchQuery}".`
                 : selectedCategory === 'all'
                   ? "No products available."
                   : `No products found in ${getCategoryName(selectedCategory)}.`
               }
             </p>
+            {isSearchMode && (
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={() => handleSearchQueryChange('')}
+              >
+                View All Products
+              </Button>
+            )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {filteredProducts.map((product) => (
-              <ProductCard
-                key={product._id}
-                product={product}
-                onAddToBill={handleAddToBill}
-              />
-            ))}
-          </div>
+          !searchLoading && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {filteredProducts.map((product) => (
+                <ProductCard
+                  key={product._id}
+                  product={product}
+                  onAddToBill={handleAddToBill}
+                />
+              ))}
+            </div>
+          )
         )}
       </main>
 

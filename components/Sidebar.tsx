@@ -24,7 +24,8 @@ import {
   Users,
   Factory,
   LogOut,
-  User as UserIcon
+  User as UserIcon,
+  LogIn
 } from 'lucide-react';
 import { DETAILS } from '@/public/details';
 import { useAuth } from '@/lib/auth-hooks';
@@ -35,41 +36,49 @@ const navigation = [
     name: 'Dashboard',
     href: '/',
     icon: Home,
+    public: true,
   },
   {
     name: 'Products',
     href: '/products',
     icon: Package,
-  },
-  {
-    name: 'Companies',
-    href: '/companies',
-    icon: Factory,
+    public: true,
   },
   {
     name: 'Categories',
     href: '/categories',
     icon: Grid3X3,
+    public: true,
+  },
+  {
+    name: 'Companies',
+    href: '/companies',
+    icon: Factory,
+    public: false,
   },
   {
     name: 'Orders',
     href: '/orders',
     icon: ShoppingBag,
+    public: false,
   },
   {
     name: 'Analytics',
     href: '/analytics',
     icon: BarChart3,
+    public: false,
   },
   {
     name: 'Customers',
     href: '/customers',
     icon: Users,
+    public: false,
   },
   {
     name: 'Management',
     href: '/management',
     icon: Settings,
+    public: false,
   },
 ];
 
@@ -85,14 +94,23 @@ export function Sidebar({ className }: SidebarProps) {
   const handleLogout = () => {
     logoutMutation.mutate();
   };
+  console.log(pathname)
+  // Don't render sidebar on auth pages
+  if (pathname?.endsWith('/login') || pathname?.endsWith('/register')) {
+    return null;
+  }
+
+  const visibleNavigation = navigation.filter(item => 
+    item.public || isAuthenticated
+  );
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
       {/* Logo */}
       <div className="flex h-16 items-center border-b px-6">
         <Link href="/" className="flex items-center space-x-2">
-          <div className="h-8 w-8 rounded-lg bg-black flex items-center justify-center">
-            {DETAILS.ICON}
+          <div className="h-8 w-8 rounded-lg bg-black flex items-center justify-center text-white">
+            {DETAILS.ICON || '🏪'}
           </div>
           <span className="text-xl font-bold">{DETAILS.NAME}</span>
         </Link>
@@ -100,21 +118,35 @@ export function Sidebar({ className }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-4 py-6">
-        {navigation.map((item) => {
+        {visibleNavigation.map((item) => {
           const isActive = pathname === item.href;
+          const isDisabled = !item.public && !isAuthenticated;
+          
           return (
             <Link
               key={item.name}
-              href={item.href}
+              href={isDisabled ? '#' : item.href}
               className={cn(
                 'flex items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
-                isActive
+                isActive && !isDisabled
                   ? 'bg-black text-white shadow-sm'
+                  : isDisabled
+                  ? 'text-gray-400 cursor-not-allowed'
                   : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               )}
+              onClick={(e) => {
+                if (isDisabled) {
+                  e.preventDefault();
+                }
+              }}
             >
               <item.icon className="h-5 w-5" />
               <span>{item.name}</span>
+              {isDisabled && (
+                <span className="ml-auto text-xs bg-gray-200 text-gray-500 px-2 py-1 rounded">
+                  Auth Required
+                </span>
+              )}
             </Link>
           );
         })}
@@ -125,7 +157,7 @@ export function Sidebar({ className }: SidebarProps) {
         {isAuthenticated && user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="w-full justify-start h-auto p-3">
+              <Button variant="ghost" className="w-full justify-start h-auto p-3 hover:bg-gray-100">
                 <div className="flex items-center space-x-3 w-full">
                   <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
                     <UserIcon className="h-4 w-4 text-gray-600" />
@@ -169,13 +201,21 @@ export function Sidebar({ className }: SidebarProps) {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <div className="flex items-center space-x-3 px-3 py-2">
-            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-              <UserIcon className="h-4 w-4 text-gray-600" />
+          <div className="space-y-2">
+            <div className="flex items-center space-x-3 px-3 py-2">
+              <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                <UserIcon className="h-4 w-4 text-gray-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-500">Guest User</p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-500">Not logged in</p>
-            </div>
+            <Button asChild variant="outline" size="sm" className="w-full">
+              <Link href="/login">
+                <LogIn className="mr-2 h-4 w-4" />
+                Sign In
+              </Link>
+            </Button>
           </div>
         )}
       </div>
@@ -184,9 +224,9 @@ export function Sidebar({ className }: SidebarProps) {
 
   return (
     <>
-      {/* Desktop Sidebar */}
-      <div className={cn('hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0', className)}>
-        <div className="flex flex-col flex-grow bg-white border-r border-gray-200 overflow-y-auto">
+      {/* Desktop Sidebar - Fixed positioning */}
+      <div className={cn('hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:z-50', className)}>
+        <div className="flex flex-col flex-grow bg-white border-r border-gray-200 overflow-y-auto shadow-sm">
           <SidebarContent />
         </div>
       </div>

@@ -100,61 +100,7 @@ export function Header({
             )}
 
             {/* User Profile Dropdown */}
-            {isAuthenticated && user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="p-2">
-                    <div className="flex items-center space-x-2">
-                      <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                        <User className="h-3 w-3 sm:h-4 sm:w-4 text-gray-600" />
-                      </div>
-                      <div className="hidden md:block text-left">
-                        <p className="text-sm font-medium text-gray-900 truncate max-w-24">
-                          {user.name}
-                        </p>
-                        <p className="text-xs text-gray-500 capitalize">
-                          {user.role}
-                        </p>
-                      </div>
-                    </div>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-3 py-2 border-b">
-                    <p className="text-sm font-medium text-gray-900">
-                      {user.name}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {user.phoneNumber}
-                    </p>
-                    <p className="text-xs text-blue-600 capitalize">
-                      {user.role}
-                    </p>
-                  </div>
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile" className="w-full cursor-pointer">
-                      <User className="mr-2 h-4 w-4" />
-                      Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings" className="w-full cursor-pointer">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Settings
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={handleLogout}
-                    disabled={logoutMutation.isPending}
-                    className="text-red-600 cursor-pointer"
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    {logoutMutation.isPending ? 'Logging out...' : 'Logout'}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
+            {!isAuthenticated &&
               <div className="flex items-center space-x-2">
                 <Button asChild variant="outline" size="sm">
                   <Link href="/auth/login">Sign in</Link>
@@ -163,7 +109,7 @@ export function Header({
                   <Link href="/auth/register">Sign up</Link>
                 </Button>
               </div>
-            )}
+            }
           </div>
         </div>
 

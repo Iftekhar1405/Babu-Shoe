@@ -32,5 +32,10 @@ export default function AuthLayout({
     return null;
   }
 
-  return <>{children}</>;
+  // Auth pages should NOT have the sidebar
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {children}
+    </div>
+  );
 }

@@ -1,4 +1,3 @@
-// app/page.tsx (Dashboard)
 'use client';
 
 import { useState } from 'react';
@@ -14,12 +13,15 @@ import { handlePrintBill } from '@/components/handlePrintBill';
 import { useCategories, useProducts } from '@/lib/api-advance';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { Sidebar } from '@/components/Sidebar';
+import { useAuth } from '@/lib/auth-hooks';
 
 function DashboardContent() {
   const [billItems, setBillItems] = useState<ProductDetail[]>([]);
   const [isBillOpen, setIsBillOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-
+  
+  const { isAuthenticated } = useAuth();
+  
   const { data: categories, isLoading: categoryLoading } = useCategories();
   const { data: products, isLoading: productsLoading } = useProducts({ search: searchQuery });
 
@@ -28,6 +30,9 @@ function DashboardContent() {
   };
 
   const handleAddToBill = (product: Product) => {
+    // Only authenticated users can add to bill
+    if (!isAuthenticated) return;
+    
     setBillItems(prev => {
       const existingItem = prev.find(item => item.productId._id === product._id);
       if (existingItem) {
@@ -69,18 +74,19 @@ function DashboardContent() {
 
   if (categoryLoading || productsLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
       <Header
         onSearch={handleSearch}
         billItemsCount={billItems.length}
         onOpenBill={() => setIsBillOpen(true)}
+        showBilling={isAuthenticated} // Only show billing features for authenticated users
       />
 
       <div className="px-4 sm:px-6 lg:px-8 py-8">
@@ -89,60 +95,62 @@ function DashboardContent() {
           description="Overview of your e-commerce store"
         />
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Products</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{products?.length || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                +2 from last month
-              </p>
-            </CardContent>
-          </Card>
+        {/* Stats Cards - Only show for authenticated users */}
+        {isAuthenticated && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{products?.length || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  +2 from last month
+                </p>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Categories</CardTitle>
-              <Grid3X3 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{categories?.length || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                Active categories
-              </p>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Categories</CardTitle>
+                <Grid3X3 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{categories?.length || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  Active categories
+                </p>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Orders Today</CardTitle>
-              <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">12</div>
-              <p className="text-xs text-muted-foreground">
-                +3 from yesterday
-              </p>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Orders Today</CardTitle>
+                <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">12</div>
+                <p className="text-xs text-muted-foreground">
+                  +3 from yesterday
+                </p>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₹2,350</div>
-              <p className="text-xs text-muted-foreground">
-                +12% from last month
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">₹2,350</div>
+                <p className="text-xs text-muted-foreground">
+                  +12% from last month
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {searchQuery ? (
           /* Search Results */
@@ -164,6 +172,7 @@ function DashboardContent() {
                     key={product._id}
                     product={product}
                     onAddToBill={handleAddToBill}
+                    showAddToBill={isAuthenticated} // Only show add to bill for authenticated users
                   />
                 ))}
               </div>
@@ -172,7 +181,7 @@ function DashboardContent() {
         ) : (
           /* Dashboard Content */
           <div className="space-y-8">
-            {/* Recent Categories */}
+            {/* Categories Section - Always visible */}
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Categories</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -182,7 +191,7 @@ function DashboardContent() {
               </div>
             </section>
 
-            {/* Recent Products */}
+            {/* Products Section - Always visible */}
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Products</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -191,6 +200,7 @@ function DashboardContent() {
                     key={product._id}
                     product={product}
                     onAddToBill={handleAddToBill}
+                    showAddToBill={isAuthenticated} // Only show add to bill for authenticated users
                   />
                 ))}
               </div>
@@ -199,29 +209,22 @@ function DashboardContent() {
         )}
       </div>
 
-      {/* Bill Drawer */}
-      <BillDrawer
-        isOpen={isBillOpen}
-        onClose={() => setIsBillOpen(false)}
-        items={billItems}
-        onUpdateItem={handleUpdateBillItem}
-        onRemoveItem={handleRemoveBillItem}
-        onClearBill={handleClearBill}
-        onPrintBill={() => handlePrintBill(billItems)}
-      />
-    </div>
+      {/* Bill Drawer - Only for authenticated users */}
+      {isAuthenticated && (
+        <BillDrawer
+          isOpen={isBillOpen}
+          onClose={() => setIsBillOpen(false)}
+          items={billItems}
+          onUpdateItem={handleUpdateBillItem}
+          onRemoveItem={handleRemoveBillItem}
+          onClearBill={handleClearBill}
+          onPrintBill={() => handlePrintBill(billItems)}
+        />
+      )}
+    </>
   );
 }
 
 export default function Dashboard() {
-  return (
-    <AuthGuard requireAuth={true}>
-      <div className="min-h-screen bg-gray-50">
-        <Sidebar />
-        <main className="lg:pl-64">
-          <DashboardContent />
-        </main>
-      </div>
-    </AuthGuard>
-  );
+  return <DashboardContent />;
 }
