@@ -6,8 +6,10 @@ import {
   UseMutationOptions,
   UseInfiniteQueryOptions,
   useInfiniteQuery,
+  QueryClient,
 } from "@tanstack/react-query";
 import { Category, Product, ApiResponse, Order, Company, Tag } from "@/types";
+import { authQueryKeys } from "./auth-hooks";
 
 const API_BASE_URL = "http://localhost:8080/api";
 
@@ -56,7 +58,6 @@ interface PaginatedResponse<T> {
   };
 }
 
-// Enhanced API Client with better error handling and types
 class ApiClient {
   private async request<T, Wrapped extends boolean = true>(
     endpoint: string,
@@ -74,10 +75,26 @@ class ApiClient {
         ...options,
       });
 
+      // Handle auth errors globally
+      if (response.status === 401) {
+        if (typeof window !== "undefined") {
+          const queryClient = useQueryClient?.();
+          if (queryClient) {
+            queryClient.removeQueries({ queryKey: authQueryKeys.all });
+          }
+          window.location.href = "/login";
+        }
+        throw new ApiError("Authentication required", 401);
+      }
+
+      if (response.status === 403) {
+        throw new ApiError("Access forbidden", 403);
+      }
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new ApiError(
-          `HTTP error! status: ${response.status}`,
+          errorData.message || `HTTP error! status: ${response.status}`,
           response.status,
           errorData
         );
@@ -152,9 +169,8 @@ class ApiClient {
     if (filters?.page) params.append("page", filters.page.toString());
     if (filters?.limit) params.append("limit", filters.limit.toString());
 
-    const endpoint = `/products${
-      params.toString() ? `?${params.toString()}` : ""
-    }`;
+    const endpoint = `/products${params.toString() ? `?${params.toString()}` : ""
+      }`;
     const response = await this.request<Product<true>[]>(endpoint);
     return response.data;
   }
@@ -168,9 +184,8 @@ class ApiClient {
     if (filters?.page) params.append("page", filters.page.toString());
     if (filters?.limit) params.append("limit", filters.limit.toString());
 
-    const endpoint = `/products/paginated${
-      params.toString() ? `?${params.toString()}` : ""
-    }`;
+    const endpoint = `/products/paginated${params.toString() ? `?${params.toString()}` : ""
+      }`;
     const response = await this.request<PaginatedResponse<Product<true>>>(
       endpoint
     );
@@ -769,4 +784,39 @@ export const useOptimisticUpdate = () => {
       );
     },
   };
+};
+
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000,
+      gcTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      retry: (failureCount, error: any) => {
+        if (error?.status === 401 || error?.status === 403) {
+          queryClient.removeQueries({ queryKey: authQueryKeys.all });
+          return false;
+        }
+        return failureCount < 3;
+      },
+    },
+    mutations: {
+      retry: (failureCount, error: any) => {
+        if (error?.status === 401 || error?.status === 403) {
+          return false;
+        }
+        return failureCount < 2;
+      },
+    },
+  },
+});
+
+// Add global error handler for auth errors
+queryClient.getQueryCache().config.onError = (error: any) => {
+  if (error?.status === 401) {
+    queryClient.removeQueries({ queryKey: authQueryKeys.all });
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+  }
 };
