@@ -14,24 +14,13 @@ export enum Role {
   MANAGER = "manager",
 }
 
-export interface JwtPayload {
-  sub: string;
-  phoneNumber: string;
-  role: Role;
-  name: string;
-}
-
 export interface AuthResponse {
   access_token: string;
   user: User;
 }
 
-export interface LoginDto {
-  phoneNumber: string;
-  password: string;
-}
 
-export interface RegisterDto {
+export interface RegisterData {
   name: string;
   phoneNumber: string;
   password: string;
@@ -41,4 +30,17 @@ export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+}
+export interface LoginData {
+  phoneNumber: string;
+  password: string;
+}
+
+export interface JwtPayload {
+  sub: string;
+  phoneNumber: string;
+  role: string;
+  name: string;
+  iat?: number;
+  exp?: number;
 }
