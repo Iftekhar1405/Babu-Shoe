@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Printer, Trash2, Minus, Plus, ShoppingBag, User, Package, Loader2, CheckCircle, MapPin } from 'lucide-react';
 import Image from 'next/image';
-import { Product, ColorData, ORDER_MODE, ORDER_PAYMENT_MODE, Bill, ProductDetail, CustomerInfo, OrderResponse } from '@/types';
+import { Product, ColorData, ORDER_MODE, ORDER_PAYMENT_MODE, Bill, ProductDetail, OrderResponse, CustomerInfo } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,9 +14,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import {
-  useCurrentBill,
-  useClearBill,
+import { 
+  useCurrentBill, 
+  useClearBill, 
   useOptimisticBillUpdates,
   useUpdateBillItemMutation,
   useRemoveBillItemMutation,
@@ -28,22 +28,15 @@ import { handlePrintBillWithCustomerInfo } from './handlePrintBill';
 interface BillDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  onPrintBill?: (items: ProductDetail<true>[], customerInfo: CustomerInfo) => void;
-  onAddToOrder?: (items: ProductDetail<true>[], customerInfo: CustomerInfo) => void;
 }
 
 
-export function BillDrawer({
-  isOpen,
-  onClose,
-  onPrintBill,
-  onAddToOrder,
-}: BillDrawerProps) {
-  const [dialogOpen, setDialogOpen] = useState(false);
+
+export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
   const [orderSummaryOpen, setOrderSummaryOpen] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<OrderResponse | null>(null);
-  const [dialogMode, setDialogMode] = useState<'print' | 'order'>('print');
-
+  
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     customerName: '',
     phoneNumber: '',
@@ -51,7 +44,7 @@ export function BillDrawer({
     paymentMode: ORDER_PAYMENT_MODE.Cash,
     address: '',
   });
-
+  
   const [discountInputs, setDiscountInputs] = useState<Record<string, number>>({});
   const debouncedDiscountInputs = useDebounce(discountInputs, 800);
 
@@ -80,13 +73,13 @@ export function BillDrawer({
     if (items.length > 0) {
       const initialDiscounts: Record<string, number> = {};
       const initialQuantities: Record<string, number> = {};
-
+      
       items.forEach(item => {
         const key = `${item.productId._id}-${item.color || ''}`;
         initialDiscounts[key] = item.discountPercent;
         initialQuantities[key] = item.quantity;
       });
-
+      
       setDiscountInputs(initialDiscounts);
       setQuantityInputs(initialQuantities);
     }
@@ -97,7 +90,7 @@ export function BillDrawer({
     const handleDebouncedDiscountUpdates = async () => {
       for (const [key, debouncedDiscount] of Object.entries(debouncedDiscountInputs)) {
         const [productId, color] = key.split('-');
-        const currentItem = items.find(item =>
+        const currentItem = items.find(item => 
           item.productId._id === productId && item.color === (color || '')
         );
 
@@ -164,7 +157,7 @@ export function BillDrawer({
 
   const handleQuantityInputChange = useCallback((productId: string, color: string, newQuantity: number) => {
     if (newQuantity < 1) return;
-
+    
     const key = `${productId}-${color}`;
     setQuantityInputs(prev => ({
       ...prev,
@@ -174,7 +167,7 @@ export function BillDrawer({
 
   const handleDiscountInputChange = useCallback((productId: string, color: string, discount: number) => {
     if (discount < 0 || discount > 100) return;
-
+    
     const key = `${productId}-${color}`;
     setDiscountInputs(prev => ({
       ...prev,
@@ -184,12 +177,12 @@ export function BillDrawer({
 
   const handleQuantityButtonClick = useCallback((productId: string, color: string, increment: number) => {
     const key = `${productId}-${color}`;
-    const currentQuantity = quantityInputs[key] ??
+    const currentQuantity = quantityInputs[key] ?? 
       items.find(item => item.productId._id === productId && item.color === color)?.quantity ?? 1;
-
+    
     const newQuantity = currentQuantity + increment;
     if (newQuantity < 1) return;
-
+    
     setQuantityInputs(prev => ({
       ...prev,
       [key]: newQuantity
@@ -231,14 +224,8 @@ export function BillDrawer({
     return colorData?.urls?.[0] || product.image;
   };
 
-  const handlePrintBill = () => {
-    setDialogMode('print');
-    setDialogOpen(true);
-  };
-
-  const handlePlaceOrder = () => {
-    setDialogMode('order');
-    setDialogOpen(true);
+  const openCustomerDialog = () => {
+    setCustomerDialogOpen(true);
   };
 
   const validateCustomerInfo = (requireAddress: boolean = false) => {
@@ -261,6 +248,16 @@ export function BillDrawer({
     return true;
   };
 
+  const resetCustomerInfo = () => {
+    setCustomerInfo({
+      customerName: '',
+      phoneNumber: '',
+      mode: ORDER_MODE.offline,
+      paymentMode: ORDER_PAYMENT_MODE.Cash,
+      address: '',
+    });
+  };
+
   const handleCreateOrder = async () => {
     if (!validateCustomerInfo(true)) return;
 
@@ -279,55 +276,49 @@ export function BillDrawer({
         address: customerInfo.address!,
         phoneNumber: customerInfo.phoneNumber
       };
-      console.log("🪵 ~ handleCreateOrder ~ orderData:", orderData)
+
       const createdOrder = await createOrderMutation.mutateAsync(orderData);
-      console.log("🪵 ~ handleCreateOrder ~ createdOrder:", createdOrder)
-
+      
       setCreatedOrder(createdOrder);
-      setDialogOpen(false);
+      setCustomerDialogOpen(false);
       setOrderSummaryOpen(true);
-
-      toast.success('Order placed successfully!');
-
-      // Reset customer info
-      setCustomerInfo({
-        customerName: '',
-        phoneNumber: '',
-        mode: ORDER_MODE.offline,
-        paymentMode: ORDER_PAYMENT_MODE.Cash,
-        address: '',
-      });
+      
+      toast.success(`Order #${createdOrder.orderNumber} placed successfully!`);
+      
+      // Clear bill and reset form
+      resetCustomerInfo();
     } catch (error) {
       console.error('Failed to create order:', error);
       toast.error('Failed to place order. Please try again.');
     }
   };
 
-  const handleJustPrintBill = () => {
+  const handlePrintBill = () => {
     if (!validateCustomerInfo(false)) return;
-    setDialogOpen(false);
+    
+    setCustomerDialogOpen(false);
     handlePrintBillWithCustomerInfo(items, customerInfo);
-
-    setCustomerInfo({
-      customerName: '',
-      phoneNumber: '',
-      mode: ORDER_MODE.offline,
-      paymentMode: ORDER_PAYMENT_MODE.Cash,
-      address: '',
-    });
+    
+    // Clear bill and reset form after printing
+    handleClearBill();
+    resetCustomerInfo();
+    onClose();
   };
 
   const handlePrintOrderSummary = () => {
     if (createdOrder) {
       // Convert order data back to bill format for printing
-      const printItems: ProductDetail<true>[] = createdOrder.productDetails.map(pd => ({
-        productId: items.find(item => item.productId._id === pd.productId)?.productId!,
-        quantity: pd.quatity,
-        color: pd.color,
-        discountPercent: pd.discountPercent,
-        finalPrice: (pd.amount * pd.quatity) * (1 - pd.discountPercent / 100),
-        salesPerson: pd.salesPerson
-      }));
+      const printItems: ProductDetail<true>[] = createdOrder.productDetails.map(pd => {
+        const originalItem = items.find(item => item.productId._id === pd.productId);
+        return {
+          productId: originalItem?.productId!,
+          quantity: pd.quatity,
+          color: pd.color,
+          discountPercent: pd.discountPercent,
+          finalPrice: (pd.amount * pd.quatity) * (1 - pd.discountPercent / 100),
+          salesPerson: pd.salesPerson
+        };
+      });
 
       const customerData = {
         customerName: createdOrder.name,
@@ -339,6 +330,12 @@ export function BillDrawer({
 
       handlePrintBillWithCustomerInfo(printItems, customerData);
     }
+  };
+
+  const handleCloseOrderSummary = () => {
+    setOrderSummaryOpen(false);
+    setCreatedOrder(null);
+    onClose();
   };
 
   const isUpdatingItem = updateBillItemMutation.isPending;
@@ -451,7 +448,7 @@ export function BillDrawer({
                                 -1
                               )}
                               disabled={
-                                (quantityInputs[`${item.productId._id}-${item.color || ''}`] ?? item.quantity) <= 1 ||
+                                (quantityInputs[`${item.productId._id}-${item.color || ''}`] ?? item.quantity) <= 1 || 
                                 isUpdatingItem
                               }
                             >
@@ -577,30 +574,12 @@ export function BillDrawer({
             {/* Action Buttons */}
             <div className="flex flex-col gap-3">
               <Button
-                onClick={handlePlaceOrder}
+                onClick={openCustomerDialog}
                 className="w-full bg-black hover:bg-gray-800 text-white h-12 font-semibold"
-                disabled={isUpdatingItem || isRemovingItem || createOrderMutation.isPending}
-              >
-                {createOrderMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Placing Order...
-                  </>
-                ) : (
-                  <>
-                    <Package className="h-4 w-4 mr-2" />
-                    Place Order
-                  </>
-                )}
-              </Button>
-              <Button
-                onClick={handlePrintBill}
-                variant="outline"
-                className="w-full h-10"
                 disabled={isUpdatingItem || isRemovingItem}
               >
-                <Printer className="h-4 w-4 mr-2" />
-                Print Bill Only
+                <User className="h-4 w-4 mr-2" />
+                Process Bill
               </Button>
               <Button
                 variant="outline"
@@ -625,8 +604,8 @@ export function BillDrawer({
         )}
       </div>
 
-      {/* Customer Info & Action Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {/* Customer Info Dialog - Single Modal for Both Actions */}
+      <Dialog open={customerDialogOpen} onOpenChange={setCustomerDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center">
@@ -662,22 +641,19 @@ export function BillDrawer({
               />
             </div>
 
-            {/* Address field - only show for orders */}
-            {dialogMode === 'order' && (
-              <div>
-                <Label htmlFor="address" className="text-sm font-medium">
-                  Address *
-                </Label>
-                <Textarea
-                  id="address"
-                  value={customerInfo.address || ''}
-                  onChange={(e) => setCustomerInfo(prev => ({ ...prev, address: e.target.value }))}
-                  placeholder="Enter delivery address"
-                  className="mt-1"
-                  rows={3}
-                />
-              </div>
-            )}
+            <div>
+              <Label htmlFor="address" className="text-sm font-medium">
+                Address <span className="text-gray-500 text-xs">(Required for orders)</span>
+              </Label>
+              <Textarea
+                id="address"
+                value={customerInfo.address}
+                onChange={(e) => setCustomerInfo(prev => ({ ...prev, address: e.target.value }))}
+                placeholder="Enter delivery address (optional for print only)"
+                className="mt-1"
+                rows={3}
+              />
+            </div>
 
             <div>
               <Label className="text-sm font-medium">Order Mode</Label>
@@ -726,34 +702,31 @@ export function BillDrawer({
           </div>
 
           <DialogFooter className="flex flex-col gap-3">
-            {dialogMode === 'order' ? (
-              <Button
-                onClick={handleCreateOrder}
-                className="w-full bg-black hover:bg-gray-800 text-white h-11"
-                disabled={createOrderMutation.isPending}
-              >
-                {createOrderMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Placing Order...
-                  </>
-                ) : (
-                  <>
-                    <Package className="h-4 w-4 mr-2" />
-                    Place Order
-                  </>
-                )}
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                onClick={handleJustPrintBill}
-                className="w-full border-gray-300 hover:bg-gray-50 h-11"
-              >
-                <Printer className="h-4 w-4 mr-2" />
-                Print Bill
-              </Button>
-            )}
+            <Button
+              onClick={handleCreateOrder}
+              className="w-full bg-black hover:bg-gray-800 text-white h-11"
+              disabled={createOrderMutation.isPending}
+            >
+              {createOrderMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Placing Order...
+                </>
+              ) : (
+                <>
+                  <Package className="h-4 w-4 mr-2" />
+                  Place Order
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handlePrintBill}
+              className="w-full border-gray-300 hover:bg-gray-50 h-11"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Print Bill Only
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -795,7 +768,11 @@ export function BillDrawer({
                   <span className="font-medium text-right flex-1 ml-4">{createdOrder.address}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Payment Mode:</span>
+                  <span className="text-sm text-gray-600">Mode:</span>
+                  <span className="font-medium capitalize">{createdOrder.mode}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Payment:</span>
                   <span className="font-medium">{createdOrder.paymentMode}</span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -810,22 +787,34 @@ export function BillDrawer({
 
               <div className="space-y-2">
                 <h4 className="font-semibold text-gray-900">Order Items:</h4>
-                {createdOrder?.productDetails.map((item, index) => (
-                  <div key={index} className="flex justify-between text-sm">
-                    <span className="text-gray-600">
-                      {typeof item.productId === "string"
-                        ? item.productId
-                        : item.productId.name} × {item.quatity}
-                    </span>
-                    <span className="font-medium">
-                      ₹{((item.amount * item.quatity) * (1 - item.discountPercent / 100)).toFixed(2)}
-                    </span>
-                  </div>
-                ))}
+                {createdOrder.productDetails.map((item, index) => {
+                  const originalItem = items.find(billItem => billItem.productId._id === item.productId);
+                  const itemTotal = (item.amount * item.quatity) * (1 - item.discountPercent / 100);
+                  
+                  return (
+                    <div key={index} className="flex justify-between items-center text-sm py-1">
+                      <div className="flex-1">
+                        <div className="font-medium">
+                          {originalItem?.productId.name || 'Product'} - {item.color}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          ₹{item.amount} × {item.quatity} 
+                          {item.discountPercent > 0 && ` (-${item.discountPercent}%)`}
+                        </div>
+                      </div>
+                      <div className="font-medium">
+                        ₹{itemTotal.toFixed(2)}
+                      </div>
+                    </div>
+                  );
+                })}
+                
                 <Separator />
-                <div className="flex justify-between font-bold">
+                <div className="flex justify-between font-bold text-lg pt-2">
                   <span>Total Amount:</span>
-                  <span>₹{total.toFixed(2)}</span>
+                  <span>₹{createdOrder.productDetails.reduce((sum, item) => {
+                    return sum + (item.amount * item.quatity) * (1 - item.discountPercent / 100);
+                  }, 0).toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -841,11 +830,7 @@ export function BillDrawer({
             </Button>
             <Button
               variant="outline"
-              onClick={() => {
-                setOrderSummaryOpen(false);
-                setCreatedOrder(null);
-                onClose();
-              }}
+              onClick={handleCloseOrderSummary}
               className="w-full h-11"
             >
               Close
