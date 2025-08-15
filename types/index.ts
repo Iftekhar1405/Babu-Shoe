@@ -125,3 +125,58 @@ export type Tag = {
   _id?: string,
   name: string,
 }
+
+export interface CreateOrderFromBillDto {
+  name: string;
+  productDetails: {
+    productId: string;
+    quatity: number; // Note: keeping the typo to match backend
+    color: string;
+    amount: number;
+    discountPercent: number;
+  }[];
+  mode: string;
+  paymentMode: string;
+  address: string;
+  phoneNumber: string;
+}
+
+
+
+export interface CustomerInfo {
+  customerName: string;
+  phoneNumber: string;
+  mode: ORDER_MODE;
+  paymentMode: ORDER_PAYMENT_MODE;
+  address?: string; 
+}
+
+export interface OrderResponse {
+  _id: string;
+  user: string;
+  name: string;
+  productDetails: {
+    productId: string | { name: string; articleNo: string };
+    quatity: number;
+    color: string;
+    amount: number;
+    discountPercent: number;
+    salesPerson?: string;
+  }[];
+  mode: string;
+  paymentMode: string;
+  orderNumber: number;
+  address: string;
+  status: string;
+  phoneNumber: string;
+  comments: any[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HeaderProps {
+  onSearch?: (query: string) => void;
+  onOpenBill?: () => void;
+  showSearch?: boolean;
+  onMenuToggle?: () => void;
+}

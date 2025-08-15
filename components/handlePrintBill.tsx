@@ -1,15 +1,48 @@
 import { DETAILS } from "@/public/details";
-import { BillItem } from "@/types";
+import { CustomerInfo, ProductDetail } from "@/types";
 
-export const handlePrintBill = (billItems: BillItem[], defaultCompanyInfo = DETAILS.COMPANY_INFO) => {
+export const handlePrintBillWithCustomerInfo = (
+  billItems: ProductDetail<true>[], 
+  customerInfo: CustomerInfo,
+  defaultCompanyInfo = DETAILS.COMPANY_INFO
+) => {
+  // Validate input
+  if (!billItems || billItems.length === 0) {
+    alert('No items in the bill to print.');
+    return;
+  }
 
   const billDate = new Date().toLocaleDateString();
   const billTime = new Date().toLocaleTimeString();
   const billNumber = `INV-${Date.now()}`;
 
-  const subtotal = billItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
-  const totalDiscount = billItems.reduce((sum, item) => sum + ((item.product.price * item.quantity) * (item.discount / 100)), 0);
+  // Calculate totals using the ProductDetail structure
+  const subtotal = billItems.reduce((sum, item) => sum + (item.productId.price * item.quantity), 0);
+  const totalDiscount = billItems.reduce((sum, item) => {
+    const itemTotal = item.productId.price * item.quantity;
+    const discountAmount = (itemTotal * item.discountPercent) / 100;
+    return sum + discountAmount;
+  }, 0);
   const finalTotal = billItems.reduce((sum, item) => sum + item.finalPrice, 0);
+
+  // Payment mode mapping
+  const getPaymentModeText = (mode: number) => {
+    switch (mode) {
+      case 0: return 'UPI';
+      case 1: return 'Cash';
+      case 2: return 'Credit';
+      default: return 'Cash';
+    }
+  };
+
+  // Order mode mapping
+  const getOrderModeText = (mode: number) => {
+    switch (mode) {
+      case 0: return 'Offline';
+      case 1: return 'Online';
+      default: return 'Offline';
+    }
+  };
 
   const billHTML = `
       <!DOCTYPE html>
@@ -160,6 +193,20 @@ export const handlePrintBill = (billItems: BillItem[], defaultCompanyInfo = DETA
             color: #e74c3c;
           }
           
+          .payment-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f6f3;
+            border-left: 4px solid #27ae60;
+            border-radius: 4px;
+          }
+          
+          .payment-info h3 {
+            color: #27ae60;
+            margin-bottom: 8px;
+            font-size: 14px;
+          }
+          
           .footer {
             clear: both;
             margin-top: 50px;
@@ -176,6 +223,16 @@ export const handlePrintBill = (billItems: BillItem[], defaultCompanyInfo = DETA
             font-size: 16px;
             color: #27ae60;
             font-weight: bold;
+          }
+          
+          .color-badge {
+            display: inline-block;
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            margin-left: 5px;
+            color: #495057;
           }
           
           @media print {
@@ -212,14 +269,16 @@ export const handlePrintBill = (billItems: BillItem[], defaultCompanyInfo = DETA
           <div class="invoice-meta">
             <div class="bill-info">
               <h3>Bill To:</h3>
-              <p><strong>Customer</strong></p>
-              <p>Walk-in Customer</p>
+              <p><strong>${customerInfo.customerName}</strong></p>
+              <p>Phone: ${customerInfo.phoneNumber}</p>
+              <p>Mode: ${getOrderModeText(customerInfo.mode)}</p>
             </div>
             <div class="date-info">
               <h3>Invoice Details:</h3>
               <p><strong>Date:</strong> ${billDate}</p>
               <p><strong>Time:</strong> ${billTime}</p>
               <p><strong>Items:</strong> ${billItems.length}</p>
+              <p><strong>Payment:</strong> ${getPaymentModeText(customerInfo.paymentMode)}</p>
             </div>
           </div>
           
@@ -227,12 +286,12 @@ export const handlePrintBill = (billItems: BillItem[], defaultCompanyInfo = DETA
           <table class="items-table">
             <thead>
               <tr>
-                <th style="width: 10%">#</th>
+                <th style="width: 8%">#</th>
                 <th style="width: 15%">Article No.</th>
                 <th style="width: 35%">Description</th>
                 <th style="width: 10%" class="text-center">Qty</th>
                 <th style="width: 12%" class="text-right">Unit Price</th>
-                <th style="width: 8%" class="text-center">Disc%</th>
+                <th style="width: 10%" class="text-center">Disc%</th>
                 <th style="width: 10%" class="text-right">Total</th>
               </tr>
             </thead>
@@ -240,16 +299,34 @@ export const handlePrintBill = (billItems: BillItem[], defaultCompanyInfo = DETA
               ${billItems.map((item, index) => `
                 <tr>
                   <td>${index + 1}</td>
-                  <td>${item.product.articleNo}</td>
-                  <td><strong>${item.product.name}</strong></td>
+                  <td>${item.productId.articleNo || 'N/A'}</td>
+                  <td>
+                    <strong>${item.productId.name}</strong>
+                    ${item.color ? `<span class="color-badge">${item.color}</span>` : ''}
+                  </td>
                   <td class="text-center">${item.quantity}</td>
-                  <td class="text-right">₹${item.product.price.toFixed(2)}</td>
-                  <td class="text-center">${item.discount}%</td>
+                  <td class="text-right">₹${item.productId.price.toFixed(2)}</td>
+                  <td class="text-center">${item.discountPercent}%</td>
                   <td class="text-right"><strong>₹${item.finalPrice.toFixed(2)}</strong></td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
+          
+          <!-- Payment Info -->
+          <div class="payment-info">
+            <h3>Payment Information</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <p><strong>Payment Mode:</strong> ${getPaymentModeText(customerInfo.paymentMode)}</p>
+                <p><strong>Order Type:</strong> ${getOrderModeText(customerInfo.mode)}</p>
+              </div>
+              <div style="text-align: right;">
+                <p><strong>Customer:</strong> ${customerInfo.customerName}</p>
+                <p><strong>Phone:</strong> ${customerInfo.phoneNumber}</p>
+              </div>
+            </div>
+          </div>
           
           <!-- Totals Section -->
           <div class="totals-section">
@@ -271,13 +348,16 @@ export const handlePrintBill = (billItems: BillItem[], defaultCompanyInfo = DETA
           
           <!-- Thank You Message -->
           <div class="thank-you">
-            Thank you for your business!
+            Thank you for your business, ${customerInfo.customerName}!
           </div>
           
           <!-- Footer -->
           <div class="footer">
             <p>This is a computer generated invoice. No signature required.</p>
             <p>For any queries, please contact us at ${defaultCompanyInfo.phone} or ${defaultCompanyInfo.email}</p>
+            <p style="margin-top: 10px; font-size: 10px;">
+              Generated on ${billDate} at ${billTime} | Invoice #${billNumber}
+            </p>
           </div>
         </div>
       </body>
@@ -290,7 +370,6 @@ export const handlePrintBill = (billItems: BillItem[], defaultCompanyInfo = DETA
     printWindow.document.write(billHTML);
     printWindow.document.close();
 
-    // Wait for content to load before printing
     printWindow.onload = () => {
       setTimeout(() => {
         printWindow.print();

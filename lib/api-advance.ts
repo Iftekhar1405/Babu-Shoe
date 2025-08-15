@@ -7,7 +7,37 @@ import {
   UseInfiniteQueryOptions,
   useInfiniteQuery,
 } from "@tanstack/react-query";
-import { Category, Product, ApiResponse, Order, Company, Tag } from "@/types";
+import {
+  Category,
+  Product,
+  ApiResponse,
+  Order,
+  Company,
+  Tag,
+  ProductDetail,
+  CreateOrderFromBillDto,
+  OrderResponse,
+} from "@/types";
+
+interface CreateBillDto {
+  productId: string;
+  quantity: number;
+  color?: string;
+  amount?: number;
+  discountPercent: number;
+  finalPrice: number;
+  salesPerson?: string;
+}
+
+interface Bill {
+  _id: string;
+  biller: string;
+  items: ProductDetail<true>[];
+  totalAmount: number;
+  billPrinted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 const API_BASE_URL = "http://localhost:8080/api";
 
@@ -36,6 +66,12 @@ export const queryKeys = {
   //company
   companies: () => [...queryKeys.all, "companies"] as const,
   company: (id: string) => [...queryKeys.companies(), id] as const,
+
+  // Bills/Cart
+  bills: () => [...queryKeys.all, "bills"] as const,
+  userBill: (userId?: string) =>
+    [...queryKeys.bills(), "user", userId] as const,
+  currentCart: () => [...queryKeys.bills(), "current-cart"] as const,
 } as const;
 
 // Types for better type safety
@@ -258,6 +294,15 @@ class ApiClient {
   }
 
   // Orders
+  async createOrderFromBill(orderData: CreateOrderFromBillDto): Promise<OrderResponse> {
+  const response = await this.request<OrderResponse>("/orders", {
+    method: "POST",
+    body: JSON.stringify(orderData),
+  });
+  console.log("🪵 ~ ApiClient ~ createOrderFromBill ~ response:", response)
+  return response;
+}
+
   async getOrders(): Promise<Order<true>[]> {
     const response = await this.request<Order<true>[]>("/orders");
     return response.data;
@@ -293,6 +338,58 @@ class ApiClient {
     await this.request<void>(`/orders/${id}`, {
       method: "DELETE",
     });
+  }
+
+  // Bills/Cart API methods
+  async addToBill(billData: CreateBillDto): Promise<Bill> {
+    const response = await this.request<Bill>("/bill/add", {
+      method: "POST",
+      body: JSON.stringify(billData),
+    });
+    return response.data;
+  }
+
+  async getCurrentBill(): Promise<Bill | null> {
+    try {
+      const response = await this.request<Bill, false>("/bill");
+      return response || null;
+    } catch (error) {
+      if (
+        error instanceof ApiError &&
+        (error.status === 404 || error.status === 400)
+      ) {
+        return null; // Return null when no bill exists
+      }
+      throw error;
+    }
+  }
+
+  async clearBill(): Promise<Bill> {
+    const response = await this.request<Bill>("/bill/clear-all");
+    return response.data;
+  }
+  async updateBillItem(updateData: {
+    productId: string;
+    color?: string;
+    quantity?: number;
+    discountPercent?: number;
+  }): Promise<Bill> {
+    const response = await this.request<Bill>("/bill/update-item", {
+      method: "PATCH",
+      body: JSON.stringify(updateData),
+    });
+    return response.data;
+  }
+
+  async removeBillItem(removeData: {
+    productId: string;
+    color?: string;
+  }): Promise<Bill> {
+    const response = await this.request<Bill>("/bill/remove-item", {
+      method: "DELETE",
+      body: JSON.stringify(removeData),
+    });
+    return response.data;
   }
 }
 
@@ -462,6 +559,22 @@ export const useOrder = <TData = Order<true>>(
     enabled: !!id,
     staleTime: 30 * 1000, // 30 seconds for orders
     gcTime: 2 * 60 * 1000,
+    ...options,
+  });
+};
+
+export const useCurrentBill = <TData = Bill | null>(
+  options?: Omit<
+    UseQueryOptions<Bill | null, ApiError, TData>,
+    "queryKey" | "queryFn"
+  >
+) => {
+  return useQuery({
+    queryKey: queryKeys.currentCart(),
+    queryFn: () => apiClient.getCurrentBill(),
+    staleTime: 30 * 1000,
+    gcTime: 2 * 60 * 1000,
+    retry: 1,
     ...options,
   });
 };
@@ -640,6 +753,31 @@ export const useCreateTag = (
 };
 
 // Order Mutations
+export const useCreateOrderFromBill = (
+  options?: UseMutationOptions<OrderResponse, ApiError, CreateOrderFromBillDto>
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (orderData: CreateOrderFromBillDto) => apiClient.createOrderFromBill(orderData),
+    onSuccess: (newOrder) => {
+      console.log("🪵 ~ useCreateOrderFromBill ~ newOrder:", newOrder)
+      // Invalidate orders list to refresh data
+      queryClient.invalidateQueries({ queryKey: queryKeys.orders() });
+      
+      // Set the new order in cache
+      queryClient.setQueryData(queryKeys.order(newOrder._id), newOrder);
+      
+      // Clear the current bill after successful order creation
+      queryClient.setQueryData(queryKeys.currentCart(), null);
+      queryClient.invalidateQueries({ queryKey: queryKeys.currentCart() });
+    },
+    onError: (error) => {
+      console.error("Failed to create order:", error);
+    },
+    ...options,
+  });
+};
 export const useCreateOrder = (
   options?: UseMutationOptions<
     Order<true>,
@@ -707,6 +845,90 @@ export const useDeleteOrder = (
   });
 };
 
+export const useAddToBill = (
+  options?: UseMutationOptions<Bill, ApiError, CreateBillDto>
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (billData: CreateBillDto) => apiClient.addToBill(billData),
+    onSuccess: (updatedBill) => {
+      // Update the current cart cache
+      queryClient.setQueryData(queryKeys.currentCart(), updatedBill);
+
+      // Invalidate to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: queryKeys.currentCart() });
+    },
+    onError: (error) => {
+      console.error("Failed to add to bill:", error);
+    },
+    ...options,
+  });
+};
+
+export const useUpdateBillItemMutation = (
+  options?: UseMutationOptions<
+    Bill,
+    ApiError,
+    { productId: string; color?: string; quantity?: number; discountPercent?: number }
+  >
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (updateData) => apiClient.updateBillItem(updateData),
+    onSuccess: (updatedBill) => {
+      queryClient.setQueryData(queryKeys.currentCart(), updatedBill);
+      queryClient.invalidateQueries({ queryKey: queryKeys.currentCart() });
+    },
+    onError: (error) => {
+      console.error("Failed to update bill item:", error);
+    },
+    ...options,
+  });
+};
+
+export const useRemoveBillItemMutation = (
+  options?: UseMutationOptions<
+    Bill,
+    ApiError,
+    { productId: string; color?: string }
+  >
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (removeData) => apiClient.removeBillItem(removeData),
+    onSuccess: (updatedBill) => {
+      queryClient.setQueryData(queryKeys.currentCart(), updatedBill);
+      queryClient.invalidateQueries({ queryKey: queryKeys.currentCart() });
+    },
+    onError: (error) => {
+      console.error("Failed to remove bill item:", error);
+    },
+    ...options,
+  });
+};
+
+
+export const useClearBill = (
+  options?: UseMutationOptions<Bill, ApiError, void>
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => apiClient.clearBill(),
+    onSuccess: (clearedBill) => {
+      queryClient.setQueryData(queryKeys.currentCart(), clearedBill);
+      queryClient.invalidateQueries({ queryKey: queryKeys.currentCart() });
+    },
+    onError: (error) => {
+      console.error("Failed to clear bill:", error);
+    },
+    ...options,
+  });
+};
+
 // =============================================================================
 // UTILITY HOOKS
 // =============================================================================
@@ -767,6 +989,112 @@ export const useOptimisticUpdate = () => {
       queryClient.setQueryData<Order<true>>(queryKeys.order(id), (old) =>
         old ? { ...old, ...updates } : undefined
       );
+    },
+  };
+};
+
+// Optimistically update bigintll
+export const useOptimisticBillUpdates = () => {
+  const queryClient = useQueryClient();
+
+  return {
+    addItemOptimistically: (item: ProductDetail<true>) => {
+      queryClient.setQueryData<Bill>(queryKeys.currentCart(), (old) => {
+        if (!old) return old;
+
+        const existingItemIndex = old.items.findIndex(
+          (existingItem) =>
+            existingItem.productId._id === item.productId._id &&
+            existingItem.color === item.color
+        );
+
+        let newItems;
+        if (existingItemIndex > -1) {
+          // Update existing item
+          newItems = [...old.items];
+          newItems[existingItemIndex] = {
+            ...newItems[existingItemIndex],
+            quantity: newItems[existingItemIndex].quantity + item.quantity,
+            finalPrice:
+              newItems[existingItemIndex].finalPrice + item.finalPrice,
+          };
+        } else {
+          // Add new item
+          newItems = [...old.items, item];
+        }
+
+        const totalAmount = newItems.reduce(
+          (sum, item) => sum + item.finalPrice,
+          0
+        );
+
+        return {
+          ...old,
+          items: newItems,
+          totalAmount,
+        };
+      });
+    },
+
+    removeItemOptimistically: (productId: string, color: string) => {
+      queryClient.setQueryData<Bill>(queryKeys.currentCart(), (old) => {
+        if (!old) return old;
+
+        const newItems = old.items.filter(
+          (item) => !(item.productId._id === productId && item.color === color)
+        );
+
+        const totalAmount = newItems.reduce(
+          (sum, item) => sum + item.finalPrice,
+          0
+        );
+
+        return {
+          ...old,
+          items: newItems,
+          totalAmount,
+        };
+      });
+    },
+
+    updateItemOptimistically: (
+      productId: string,
+      color: string,
+      updates: Partial<ProductDetail<true>>
+    ) => {
+      queryClient.setQueryData<Bill>(queryKeys.currentCart(), (old) => {
+        if (!old) return old;
+
+        const newItems = old.items.map((item) => {
+          if (item.productId._id === productId && item.color === color) {
+            return { ...item, ...updates };
+          }
+          return item;
+        });
+
+        const totalAmount = newItems.reduce(
+          (sum, item) => sum + item.finalPrice,
+          0
+        );
+
+        return {
+          ...old,
+          items: newItems,
+          totalAmount,
+        };
+      });
+    },
+
+    clearBillOptimistically: () => {
+      queryClient.setQueryData<Bill>(queryKeys.currentCart(), (old) => {
+        if (!old) return old;
+
+        return {
+          ...old,
+          items: [],
+          totalAmount: 0,
+        };
+      });
     },
   };
 };
