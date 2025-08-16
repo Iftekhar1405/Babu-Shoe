@@ -80,6 +80,7 @@ export enum ORDER_RETURN_REASON { 'damaged', 'wrong_product', 'others' }
 
 export interface Order<e extends boolean = true> {
   _id?: string;
+  name: string;
   user?: string;
   orderNumber: number;
   customerName: string;
@@ -93,6 +94,7 @@ export interface Order<e extends boolean = true> {
   address?: e extends true ? { fullAddress: string; _id: string } : string;
   cancelationReason?: ORDER_CANCELATION_REASON;
   cancelationDescription?: string;
+  comments?: Comment[];
   returnReason?: ORDER_RETURN_REASON;
   returnDescription?: string;
   deliveryDate?: Date;
@@ -148,7 +150,7 @@ export interface CustomerInfo {
   phoneNumber: string;
   mode: ORDER_MODE;
   paymentMode: ORDER_PAYMENT_MODE;
-  address?: string; 
+  address?: string;
 }
 
 export interface OrderResponse {

@@ -41,49 +41,49 @@ import { ORDER_STATUS } from '@/types';
 
 // Order status configuration
 const ORDER_STATUS_CONFIG = {
-    pending: {
+    [ORDER_STATUS.pending]: {
         label: 'Pending',
         color: 'bg-yellow-500/20 text-yellow-600',
         icon: Clock,
         bgColor: 'bg-yellow-500'
     },
-    confirmed: {
+    [ORDER_STATUS.confirmed]: {
         label: 'Confirmed',
         color: 'bg-blue-500/20 text-blue-600',
         icon: CheckCircle,
         bgColor: 'bg-blue-500'
     },
-    packed: {
+    [ORDER_STATUS.packed]: {
         label: 'Packed',
         color: 'bg-purple-500/20 text-purple-600',
         icon: Package,
         bgColor: 'bg-purple-500'
     },
-    dispatched: {
+    [ORDER_STATUS.dispatched]: {
         label: 'Dispatched',
         color: 'bg-indigo-500/20 text-indigo-600',
         icon: RefreshCw,
         bgColor: 'bg-indigo-500'
     },
-    outfordeliver: {
+    [ORDER_STATUS.outfordeliver]: {
         label: 'Out for Delivery',
         color: 'bg-orange-500/20 text-orange-600',
         icon: Truck,
         bgColor: 'bg-orange-500'
     },
-    delivered: {
+    [ORDER_STATUS.delivered]: {
         label: 'Delivered',
         color: 'bg-green-500/20 text-green-600',
         icon: CheckCircle,
         bgColor: 'bg-green-500'
     },
-    cancelled: {
+    [ORDER_STATUS.cancelled]: {
         label: 'Cancelled',
         color: 'bg-red-500/20 text-red-600',
         icon: XCircle,
         bgColor: 'bg-red-500'
     },
-    return: {
+    [ORDER_STATUS.return]: {
         label: 'Returned',
         color: 'bg-gray-500/20 text-gray-600',
         icon: RefreshCw,
@@ -169,13 +169,13 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
     const calculateOrderTotal = () => {
         if (!order?.productDetails) return 0;
         return order.productDetails.reduce((total, item) => {
-            const discountedPrice = item.amount * (1 - item.discountPercent / 100);
-            return total + (discountedPrice * item.quatity);
+            const discountedPrice = item.amount && item?.amount * (1 - item.discountPercent / 100);
+            return total + ((discountedPrice ?? 0) * item.quantity);
         }, 0);
     };
 
     const getStatusInfo = (status: string) => {
-        return ORDER_STATUS_CONFIG[status as keyof typeof ORDER_STATUS_CONFIG] || ORDER_STATUS_CONFIG.pending;
+        return ORDER_STATUS_CONFIG[status as keyof typeof ORDER_STATUS] || ORDER_STATUS_CONFIG.pending;
     };
 
     // Add action to undo stack
@@ -193,7 +193,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
         try {
             if (action.type === UNDO_ACTIONS.STATUS_UPDATE) {
                 await updateOrderStatusMutation.mutateAsync({
-                    id: order._id,
+                    id: order._id || '',
                     status: action.previousState.status,
                     comment: `Undo: Reverted status from ${getStatusInfo(action.newState.status).label} back to ${getStatusInfo(action.previousState.status).label}`,
                 });
@@ -221,7 +221,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
     const handleStatusUpdate = async (newStatus: string) => {
         if (!order) return;
 
-        const previousStatus = order.status;
+        const previousStatus = order.status as unknown as keyof typeof ORDER_STATUS_CONFIG;
         const undoAction: UndoAction = {
             id: `status_${Date.now()}`,
             type: UNDO_ACTIONS.STATUS_UPDATE,
@@ -233,7 +233,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
 
         try {
             await updateOrderStatusMutation.mutateAsync({
-                id: order._id,
+                id: order._id || '',
                 status: newStatus,
                 comment: `Status updated to ${getStatusInfo(newStatus).label}`,
             });
@@ -271,8 +271,8 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
 
         try {
             await updateOrderStatusMutation.mutateAsync({
-                id: order._id,
-                status: order.status,
+                id: order._id || '',
+                status: order.status as unknown as keyof typeof ORDER_STATUS_CONFIG,
                 comment: editingComment,
             });
 
@@ -531,7 +531,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                 </div>
 
                 {/* Status Tracker */}
-                <OrderStatusTracker status={order.status} />
+                <OrderStatusTracker status={order?.status as unknown as keyof typeof ORDER_STATUS_CONFIG} />
 
                 {/* Order Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -643,8 +643,8 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                                 </thead>
                                 <tbody className="[&_tr:last-child]:border-0">
                                     {order.productDetails.map((item, index) => {
-                                        const discountedPrice = item.amount * (1 - item.discountPercent / 100);
-                                        const itemTotal = discountedPrice * item.quatity;
+                                        const discountedPrice = (item.amount ?? 0) * (1 - item.discountPercent / 100);
+                                        const itemTotal = discountedPrice * item.quantity;
 
                                         return (
                                             <tr key={index} className="border-b transition-colors hover:bg-muted/50">
@@ -671,11 +671,11 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                                                     <Badge variant="outline">{item.color}</Badge>
                                                 </td>
                                                 <td className="p-4 align-middle">
-                                                    <Badge variant="secondary">{item.quatity}</Badge>
+                                                    <Badge variant="secondary">{item.quantity}</Badge>
                                                 </td>
                                                 <td className="p-4 align-middle">
                                                     <div>
-                                                        <p className="font-medium">{formatCurrency(item.amount)}</p>
+                                                        <p className="font-medium">{formatCurrency(item.amount ?? 0)}</p>
                                                         {item.discountPercent > 0 && (
                                                             <p className="text-sm text-green-600">
                                                                 After discount: {formatCurrency(discountedPrice)}
@@ -730,7 +730,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                 </Card>
 
                 {/* Shipping Information */}
-                {(order.shippingPartner || order.trackingId) && (
+                {/* {(order.shippingPartner || order.trackingId) && (
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
@@ -764,7 +764,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                             )}
                         </CardContent>
                     </Card>
-                )}
+                )} */}
 
                 {/* Recent Actions Panel */}
                 <RecentActionsPanel />
@@ -838,7 +838,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                                                 </div>
                                                 <div>
                                                     <p className="font-medium text-sm">
-                                                        {typeof comment.user === 'string' ? comment.user : comment.user?.name || 'System'}
+                                                        {comment.user}
                                                     </p>
                                                     <p className="text-xs text-muted-foreground">
                                                         {formatDate(new Date())}
@@ -871,15 +871,16 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                     <Button onClick={() => window.print()} variant="outline">
                         Print Order
                     </Button>
-                    {order.status !== 'delivered' && order.status !== 'cancelled' && (
+                    {order.status !== ORDER_STATUS.delivered && order.status !== ORDER_STATUS.cancelled && (
                         <Button
                             onClick={() => {
-                                const nextStatus = order.status === 'pending' ? 'confirmed' :
-                                    order.status === 'confirmed' ? 'packed' :
-                                        order.status === 'packed' ? 'dispatched' :
-                                            order.status === 'dispatched' ? 'outfordeliver' :
-                                                order.status === 'outfordeliver' ? 'delivered' : order.status;
-                                if (nextStatus !== order.status) {
+                                const nextStatus: keyof typeof ORDER_STATUS_CONFIG = order.status === ORDER_STATUS.pending ? ORDER_STATUS.confirmed :
+                                    order.status === ORDER_STATUS.confirmed ? ORDER_STATUS.packed :
+                                        order.status === ORDER_STATUS.packed ? ORDER_STATUS.dispatched :
+                                            order.status === ORDER_STATUS.dispatched ? ORDER_STATUS.dispatched :
+                                                order.status === ORDER_STATUS.outfordeliver ? ORDER_STATUS.delivered : order.status;
+
+                                if (nextStatus != order.status) {
                                     handleStatusUpdate(nextStatus);
                                 }
                             }}

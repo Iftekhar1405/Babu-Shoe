@@ -210,9 +210,8 @@ class ApiClient {
     if (filters?.page) params.append("page", filters.page.toString());
     if (filters?.limit) params.append("limit", filters.limit.toString());
 
-    const endpoint = `/products${
-      params.toString() ? `?${params.toString()}` : ""
-    }`;
+    const endpoint = `/products${params.toString() ? `?${params.toString()}` : ""
+      }`;
     const response = await this.request<Product<true>[]>(endpoint);
     return response.data;
   }
@@ -226,9 +225,8 @@ class ApiClient {
     if (filters?.page) params.append("page", filters.page.toString());
     if (filters?.limit) params.append("limit", filters.limit.toString());
 
-    const endpoint = `/products/paginated${
-      params.toString() ? `?${params.toString()}` : ""
-    }`;
+    const endpoint = `/products/paginated${params.toString() ? `?${params.toString()}` : ""
+      }`;
     const response = await this.request<PaginatedResponse<Product<true>>>(
       endpoint
     );
@@ -319,7 +317,7 @@ class ApiClient {
   async createOrderFromBill(
     orderData: CreateOrderFromBillDto
   ): Promise<OrderResponse> {
-    const response = await this.request<OrderResponse>("/orders", {
+    const response = await this.request<OrderResponse, false>("/orders", {
       method: "POST",
       body: JSON.stringify(orderData),
     });
@@ -340,10 +338,9 @@ class ApiClient {
     if (filters?.startDate) params.append("startDate", filters.startDate);
     if (filters?.endDate) params.append("endDate", filters.endDate);
 
-    const endpoint = `/orders/paginated${
-      params.toString() ? `?${params.toString()}` : ""
-    }`;
-    const response = await this.request<PaginatedOrderResponse>(endpoint);
+    const endpoint = `/orders/paginated${params.toString() ? `?${params.toString()}` : ""
+      }`;
+    const response = await this.request<PaginatedOrderResponse, false>(endpoint);
     return response;
   }
 
@@ -360,7 +357,7 @@ class ApiClient {
       completedOrders: number;
       cancelledOrders: number;
       totalRevenue: number;
-    }>("/orders/stats");
+    }, false>("/orders/stats");
     return response;
   }
 
@@ -390,7 +387,7 @@ class ApiClient {
 
   async getOrderById(id: string): Promise<Order<true>> {
     console.log("🪵 ~ ApiClient ~ getOrderById ~ id:", id)
-    const response = await this.request<Order<true>>(`/orders/${id}`);
+    const response = await this.request<Order<true>, false>(`/orders/${id}`);
     return response;
   }
 
@@ -635,8 +632,8 @@ export const useOrder = <TData = Order<true>>(
   >
 ) => {
   return useQuery({
-    queryKey: queryKeys.order(id),
-    queryFn: () => apiClient.getOrderById(id),
+    queryKey: queryKeys.order(id || ''),
+    queryFn: () => apiClient.getOrderById(id || ''),
     enabled: !!id,
     staleTime: 30 * 1000, // 30 seconds for orders
     gcTime: 2 * 60 * 1000,
