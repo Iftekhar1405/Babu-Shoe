@@ -19,9 +19,9 @@ function DashboardContent() {
   const [billItems, setBillItems] = useState<ProductDetail[]>([]);
   const [isBillOpen, setIsBillOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const { isAuthenticated } = useAuth();
-  
+
   const { data: categories, isLoading: categoryLoading } = useCategories();
   const { data: products, isLoading: productsLoading } = useProducts({ search: searchQuery });
 
@@ -32,7 +32,7 @@ function DashboardContent() {
   const handleAddToBill = (product: Product) => {
     // Only authenticated users can add to bill
     if (!isAuthenticated) return;
-    
+
     setBillItems(prev => {
       const existingItem = prev.find(item => item.productId._id === product._id);
       if (existingItem) {
@@ -200,7 +200,7 @@ function DashboardContent() {
                     key={product._id}
                     product={product}
                     onAddToBill={handleAddToBill}
-                    showAddToBill={isAuthenticated} // Only show add to bill for authenticated users
+                  // showAddToBill={isAuthenticated} // Only show add to bill for authenticated users
                   />
                 ))}
               </div>
@@ -215,7 +215,7 @@ function DashboardContent() {
           isOpen={isBillOpen}
           onClose={() => setIsBillOpen(false)}
           items={billItems}
-          onUpdateItem={handleUpdateBillItem}
+          // onUpdateItem={handleUpdateBillItem}
           onRemoveItem={handleRemoveBillItem}
           onClearBill={handleClearBill}
           onPrintBill={() => handlePrintBill(billItems)}
