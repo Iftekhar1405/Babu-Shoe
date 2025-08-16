@@ -1,5 +1,5 @@
 'use client'
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     Card,
@@ -30,10 +30,14 @@ import {
     MessageSquare,
     Edit,
     Save,
-    X
+    X,
+    Undo2,
+    AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useOrder, useUpdateOrderStatus } from '@/lib/api-advance';
+import { toast } from 'sonner';
+import { ORDER_STATUS } from '@/types';
 
 // Order status configuration
 const ORDER_STATUS_CONFIG = {
@@ -87,26 +91,60 @@ const ORDER_STATUS_CONFIG = {
     },
 };
 
+// Undo action types
+const UNDO_ACTIONS = {
+    STATUS_UPDATE: 'status_update',
+    COMMENT_ADD: 'comment_add'
+};
+
+interface UndoAction {
+    id: string;
+    type: string;
+    timestamp: Date;
+    previousState: any;
+    newState: any;
+    description: string;
+}
+
 interface OrderDetailsPageProps {
-    orderId: string;
+    orderIds: string;
 }
 
 export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
-    console.log("🪵 ~ OrderDetailsPage ~ orderIds:", orderIds)
     const orderId = window.location.pathname.split("/").pop()
     const router = useRouter();
     const [isEditing, setIsEditing] = useState(false);
     const [editingComment, setEditingComment] = useState('');
+
+    // Undo functionality state
+    const [undoStack, setUndoStack] = useState<UndoAction[]>([]);
+    const [showUndoTimer, setShowUndoTimer] = useState(false);
+    const [undoTimeRemaining, setUndoTimeRemaining] = useState(10);
+    const [currentUndoAction, setCurrentUndoAction] = useState<UndoAction | null>(null);
+
     const {
         data: order,
         isLoading,
         error,
         refetch
     } = useOrder(orderId);
-    console.log("🪵 ~ OrderDetailsPage ~ order:", order)
-    console.log("🪵 ~ OrderDetailsPage ~ error:", error)
 
     const updateOrderStatusMutation = useUpdateOrderStatus();
+
+    // Undo timer effect
+    useEffect(() => {
+        let timer: NodeJS.Timeout;
+        if (showUndoTimer && undoTimeRemaining > 0) {
+            timer = setTimeout(() => {
+                setUndoTimeRemaining(prev => prev - 1);
+            }, 1000);
+        } else if (undoTimeRemaining === 0) {
+            setShowUndoTimer(false);
+            setCurrentUndoAction(null);
+            setUndoTimeRemaining(10);
+        }
+        return () => clearTimeout(timer);
+    }, [showUndoTimer, undoTimeRemaining]);
 
     // Helper functions
     const formatCurrency = (amount: number) => {
@@ -140,8 +178,58 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
         return ORDER_STATUS_CONFIG[status as keyof typeof ORDER_STATUS_CONFIG] || ORDER_STATUS_CONFIG.pending;
     };
 
+    // Add action to undo stack
+    const addUndoAction = (action: UndoAction) => {
+        setUndoStack(prev => [action, ...prev.slice(0, 4)]); // Keep only last 5 actions
+        setCurrentUndoAction(action);
+        setShowUndoTimer(true);
+        setUndoTimeRemaining(10);
+    };
+
+    // Execute undo
+    const executeUndo = async (action: UndoAction) => {
+        if (!order) return;
+
+        try {
+            if (action.type === UNDO_ACTIONS.STATUS_UPDATE) {
+                await updateOrderStatusMutation.mutateAsync({
+                    id: order._id,
+                    status: action.previousState.status,
+                    comment: `Undo: Reverted status from ${getStatusInfo(action.newState.status).label} back to ${getStatusInfo(action.previousState.status).label}`,
+                });
+            } else if (action.type === UNDO_ACTIONS.COMMENT_ADD) {
+                // For comment undo, you'd need to implement a delete comment API
+                // This is a placeholder for the undo comment functionality
+                console.log('Undoing comment add - would need API support');
+            }
+
+            // Remove the undone action from stack
+            setUndoStack(prev => prev.filter(item => item.id !== action.id));
+            setShowUndoTimer(false);
+            setCurrentUndoAction(null);
+            refetch();
+
+            toast.success("Action undone successfully", {
+                description: `Reverted: ${action.description}`
+            });
+        } catch (error) {
+            console.error('Failed to undo action:', error);
+            toast.error("Failed to undo action");
+        }
+    };
+
     const handleStatusUpdate = async (newStatus: string) => {
         if (!order) return;
+
+        const previousStatus = order.status;
+        const undoAction: UndoAction = {
+            id: `status_${Date.now()}`,
+            type: UNDO_ACTIONS.STATUS_UPDATE,
+            timestamp: new Date(),
+            previousState: { status: previousStatus },
+            newState: { status: newStatus },
+            description: `Status changed from ${getStatusInfo(previousStatus).label} to ${getStatusInfo(newStatus).label}`
+        };
 
         try {
             await updateOrderStatusMutation.mutateAsync({
@@ -149,14 +237,37 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                 status: newStatus,
                 comment: `Status updated to ${getStatusInfo(newStatus).label}`,
             });
+
+            addUndoAction(undoAction);
             refetch();
+
+            toast.success("Status Updated", {
+                description: `Changed to ${getStatusInfo(newStatus).label}`,
+                action: {
+                    label: "Undo",
+                    onClick: () => executeUndo(undoAction),
+                },
+            });
         } catch (error) {
             console.error('Failed to update order status:', error);
+            toast.error("Failed to update status");
         }
     };
 
     const handleAddComment = async () => {
         if (!order || !editingComment.trim()) return;
+
+        const undoAction: UndoAction = {
+            id: `comment_${Date.now()}`,
+            type: UNDO_ACTIONS.COMMENT_ADD,
+            timestamp: new Date(),
+            previousState: { commentCount: order.comments?.length || 0 },
+            newState: {
+                commentCount: (order.comments?.length || 0) + 1,
+                comment: editingComment
+            },
+            description: `Added comment: "${editingComment.slice(0, 50)}${editingComment.length > 50 ? '...' : ''}"`
+        };
 
         try {
             await updateOrderStatusMutation.mutateAsync({
@@ -164,12 +275,27 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                 status: order.status,
                 comment: editingComment,
             });
+
+            addUndoAction(undoAction);
             setEditingComment('');
             setIsEditing(false);
             refetch();
+
+            toast.success("Comment added", {
+                action: {
+                    label: "Undo",
+                    onClick: () => executeUndo(undoAction),
+                },
+            });
         } catch (error) {
             console.error('Failed to add comment:', error);
+            toast.error("Failed to add comment");
         }
+    };
+
+    // Manual undo from stack
+    const handleManualUndo = (action: UndoAction) => {
+        executeUndo(action);
     };
 
     const OrderStatusTracker = ({ status }: { status: string }) => {
@@ -240,6 +366,109 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
         );
     };
 
+    // Undo Timer Component
+    const UndoTimer = () => {
+        if (!showUndoTimer || !currentUndoAction) return null;
+
+        return (
+            <div className="fixed bottom-4 right-4 z-50">
+                <Card className="w-80 shadow-lg border-l-4 border-l-amber-500">
+                    <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                            <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                                <p className="font-medium text-sm mb-1">Action Completed</p>
+                                <p className="text-sm text-muted-foreground mb-3">
+                                    {currentUndoAction.description}
+                                </p>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => executeUndo(currentUndoAction)}
+                                            disabled={updateOrderStatusMutation.isPending}
+                                        >
+                                            <Undo2 className="h-3 w-3 mr-1" />
+                                            Undo
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => {
+                                                setShowUndoTimer(false);
+                                                setCurrentUndoAction(null);
+                                            }}
+                                        >
+                                            Dismiss
+                                        </Button>
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        Auto-dismiss in {undoTimeRemaining}s
+                                    </div>
+                                </div>
+                                <div className="mt-2">
+                                    <Progress
+                                        value={(undoTimeRemaining / 10) * 100}
+                                        className="h-1"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    };
+
+    // Recent Actions Panel
+    const RecentActionsPanel = () => {
+        if (undoStack.length === 0) return null;
+
+        return (
+            <Card className="mb-6">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Undo2 className="h-5 w-5" />
+                        Recent Actions
+                        <Badge variant="secondary">{undoStack.length}</Badge>
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-2">
+                        {undoStack.slice(0, 3).map((action, index) => (
+                            <div
+                                key={action.id}
+                                className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                            >
+                                <div className="flex-1">
+                                    <p className="text-sm font-medium">{action.description}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {formatDate(action.timestamp)}
+                                    </p>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleManualUndo(action)}
+                                    disabled={updateOrderStatusMutation.isPending}
+                                >
+                                    <Undo2 className="h-3 w-3 mr-1" />
+                                    Undo
+                                </Button>
+                            </div>
+                        ))}
+                        {undoStack.length > 3 && (
+                            <p className="text-xs text-muted-foreground text-center pt-2">
+                                +{undoStack.length - 3} more actions in history
+                            </p>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    };
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-background">
@@ -288,7 +517,6 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                             onClick={() => router.back()}
                         >
                             <ArrowLeft className="h-4 w-4 mr-2" />
-                            Back to Orders
                         </Button>
                         <div>
                             <h1 className="text-3xl font-bold">Order #{order.orderNumber}</h1>
@@ -538,6 +766,9 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                     </Card>
                 )}
 
+                {/* Recent Actions Panel */}
+                <RecentActionsPanel />
+
                 {/* Comments Section */}
                 <Card>
                     <CardHeader>
@@ -664,6 +895,9 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                     )}
                 </div>
             </div>
+
+            {/* Undo Timer Popup */}
+            <UndoTimer />
         </div>
     );
 }

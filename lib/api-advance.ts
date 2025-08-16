@@ -361,7 +361,7 @@ class ApiClient {
       cancelledOrders: number;
       totalRevenue: number;
     }>("/orders/stats");
-    return response.data;
+    return response;
   }
 
   async updateOrderStatus(
@@ -923,15 +923,27 @@ export const useUpdateOrderStatus = (
   return useMutation({
     mutationFn: ({ id, status, comment }) =>
       apiClient.updateOrderStatus(id, status, comment),
-    onSuccess: (updatedOrder) => {
-      // Update the specific order
-      queryClient.setQueryData(
-        queryKeys.order(updatedOrder._id || ""),
-        updatedOrder
+    onSuccess: (updatedOrder, { id }) => {
+
+      queryClient.setQueryData(queryKeys.order(id), updatedOrder);
+
+      queryClient.setQueryData<Order<true>[]>(queryKeys.orders(), (old) =>
+        old?.map((order) => (order._id === id ? updatedOrder : order))
       );
 
-      // Invalidate orders lists to refresh data
-      queryClient.invalidateQueries({ queryKey: queryKeys.orders() });
+      queryClient.setQueriesData<PaginatedOrderResponse>(
+        { queryKey: queryKeys.ordersList() },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            data: old.data.map((order) =>
+              order._id === id ? updatedOrder : order
+            ),
+          };
+        }
+      );
+
       queryClient.invalidateQueries({ queryKey: queryKeys.ordersStats() });
     },
     onError: (error) => {

@@ -7,6 +7,7 @@ import { queryClient } from './query-client';
 import { AuthProvider } from '@/hooks/use_authContext';
 import { Toaster } from 'sonner';
 import { ClientLayout } from '@/components/ClientLayout';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -25,9 +26,11 @@ export default function RootLayout({
       <body className={inter.className}>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <ClientLayout>
-              {children}
-            </ClientLayout>
+            <TooltipProvider>
+              <ClientLayout>
+                {children}
+              </ClientLayout>
+            </TooltipProvider>
             <Toaster position="top-right" richColors />
           </AuthProvider>
         </QueryClientProvider>
