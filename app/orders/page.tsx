@@ -219,7 +219,7 @@ export default function OrdersPage() {
     data: stats,
     isLoading: statsLoading
   } = useOrdersStats();
-    console.log("🪵 ~ OrdersPage ~ stats:", stats)
+  console.log("🪵 ~ OrdersPage ~ stats:", stats)
 
   const updateOrderStatusMutation = useUpdateOrderStatus();
 
@@ -559,7 +559,7 @@ export default function OrdersPage() {
             <div className="flex items-center gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <StarsIcon size={18}/>
+                  <StarsIcon size={18} />
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className='p-0'>
                   {/* Quick Stats Sidebar */}
@@ -613,7 +613,7 @@ export default function OrdersPage() {
                   </div>
                 </TooltipContent>
               </Tooltip>
-              
+
               {/* Column Visibility Popover */}
               <Popover>
                 <PopoverTrigger asChild>
@@ -640,9 +640,9 @@ export default function OrdersPage() {
                         {visibleColumnCount}/{COLUMNS.length}
                       </Badge>
                     </div>
-                    
+
                     <Separator className="my-2" />
-                    
+
                     {/* Individual Columns */}
                     <div className="space-y-1 max-h-64 overflow-y-auto">
                       {COLUMNS.map((column) => (
@@ -655,7 +655,7 @@ export default function OrdersPage() {
                               id={`column-${column.key}`}
                               checked={visibleColumns[column.key]}
                               onCheckedChange={() => toggleColumn(column.key)}
-                              className="data-[state=checked]:bg-blue-600"
+
                             />
                             <label
                               htmlFor={`column-${column.key}`}
@@ -665,7 +665,7 @@ export default function OrdersPage() {
                             </label>
                           </div>
                           {column.defaultVisible && (
-                            <Badge variant="outline" className="text-xs text-blue-600 border-blue-200">
+                            <Badge variant="outline" className="text-xs">
                               Default
                             </Badge>
                           )}
@@ -673,7 +673,7 @@ export default function OrdersPage() {
                       ))}
                     </div>
                   </div>
-                  
+
                   <div className="border-t p-3 flex justify-between">
                     <Button
                       variant="ghost"
@@ -691,7 +691,7 @@ export default function OrdersPage() {
                   </div>
                 </PopoverContent>
               </Popover>
-              
+
               <Button variant="outline" size="sm" onClick={() => refetchOrders()}>
                 <RefreshCcw className="h-4 w-4" />
               </Button>
@@ -773,7 +773,7 @@ export default function OrdersPage() {
                       <TableRow
                         key={order._id}
                         className="hover:bg-blue-50/50 transition-colors duration-200 cursor-pointer group"
-                        onClick={() => handleViewOrder(order?._id)}
+                        onClick={() => handleViewOrder(order._id || '')}
                       >
                         {visibleColumns.orderNumber && (
                           <TableCell className="font-mono font-medium text-blue-600">

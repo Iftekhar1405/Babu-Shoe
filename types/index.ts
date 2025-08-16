@@ -1,3 +1,5 @@
+import { User } from "./auth.type";
+
 export interface Category {
   _id?: string;
   name: string;
@@ -60,15 +62,16 @@ export interface ApiResponse<T> {
 }
 
 export enum ORDER_STATUS {
-  'pending',
-  'confirmed',
-  'packed',
-  'dispatched',
-  'outfordeliver',
-  'delivered',
-  'cancelled',
-  'return',
+  pending = 'pending',
+  confirmed = 'confirmed',
+  packed = 'packed',
+  dispatched = 'dispatched',
+  outfordeliver = 'outfordeliver',
+  delivered = 'delivered',
+  cancelled = 'cancelled',
+  return = 'return',
 }
+
 
 export enum ORDER_MODE { 'offline', 'online' }
 
@@ -105,8 +108,8 @@ export interface Order<e extends boolean = true> {
 
 
 
-export type Comment = {
-  user: string; // MongoId
+export type Comment<e = true> = {
+  user: e extends true ? User : string; // MongoId
   comment: string;
 };
 

@@ -37,7 +37,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useOrder, useUpdateOrderStatus } from '@/lib/api-advance';
 import { toast } from 'sonner';
-import { ORDER_STATUS } from '@/types';
+import { ORDER_MODE, ORDER_PAYMENT_MODE, ORDER_STATUS } from '@/types';
 
 // Order status configuration
 const ORDER_STATUS_CONFIG = {
@@ -111,7 +111,7 @@ interface OrderDetailsPageProps {
 }
 
 export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
-    const orderId = window.location.pathname.split("/").pop()
+    const orderId = typeof window !== 'undefined' ? window.location.pathname.split("/").pop() : '';
     const router = useRouter();
     const [isEditing, setIsEditing] = useState(false);
     const [editingComment, setEditingComment] = useState('');
@@ -127,7 +127,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
         isLoading,
         error,
         refetch
-    } = useOrder(orderId);
+    } = useOrder(orderId || '');
 
     const updateOrderStatusMutation = useUpdateOrderStatus();
 
@@ -154,7 +154,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
         }).format(amount);
     };
 
-    const formatDate = (date: string | Date | null) => {
+    const formatDate = (date: string | Date | null | undefined) => {
         if (!date) return 'N/A';
         const d = new Date(date);
         return d.toLocaleString('en-IN', {
@@ -169,13 +169,17 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
     const calculateOrderTotal = () => {
         if (!order?.productDetails) return 0;
         return order.productDetails.reduce((total, item) => {
-            const discountedPrice = item.amount && item?.amount * (1 - item.discountPercent / 100);
+            console.log({ item })
+            if (!item.amount) return total + 0
+            const discountedPrice = item.amount * (1 - item.discountPercent / 100);
+            console.log({ discountedPrice })
+            console.log({ total: +total })
             return total + ((discountedPrice ?? 0) * item.quantity);
         }, 0);
     };
 
-    const getStatusInfo = (status: string) => {
-        return ORDER_STATUS_CONFIG[status as keyof typeof ORDER_STATUS] || ORDER_STATUS_CONFIG.pending;
+    const getStatusInfo = (status: ORDER_STATUS) => {
+        return ORDER_STATUS_CONFIG[status] || ORDER_STATUS_CONFIG[ORDER_STATUS.pending];
     };
 
     // Add action to undo stack
@@ -218,10 +222,10 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
         }
     };
 
-    const handleStatusUpdate = async (newStatus: string) => {
+    const handleStatusUpdate = async (newStatus: ORDER_STATUS) => {
         if (!order) return;
 
-        const previousStatus = order.status as unknown as keyof typeof ORDER_STATUS_CONFIG;
+        const previousStatus = order.status;
         const undoAction: UndoAction = {
             id: `status_${Date.now()}`,
             type: UNDO_ACTIONS.STATUS_UPDATE,
@@ -234,7 +238,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
         try {
             await updateOrderStatusMutation.mutateAsync({
                 id: order._id || '',
-                status: newStatus,
+                status: newStatus as unknown as keyof typeof ORDER_STATUS,
                 comment: `Status updated to ${getStatusInfo(newStatus).label}`,
             });
 
@@ -272,7 +276,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
         try {
             await updateOrderStatusMutation.mutateAsync({
                 id: order._id || '',
-                status: order.status as unknown as keyof typeof ORDER_STATUS_CONFIG,
+                status: order.status as unknown as keyof typeof ORDER_STATUS,
                 comment: editingComment,
             });
 
@@ -298,12 +302,14 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
         executeUndo(action);
     };
 
-    const OrderStatusTracker = ({ status }: { status: string }) => {
-        const statuses = ['pending', 'confirmed', 'packed', 'dispatched', 'outfordeliver', 'delivered'];
+    const OrderStatusTracker = ({ status }: { status: ORDER_STATUS }) => {
+        const statuses: ORDER_STATUS[] = [ORDER_STATUS.pending, ORDER_STATUS.confirmed, ORDER_STATUS.packed, ORDER_STATUS.dispatched, ORDER_STATUS.outfordeliver, ORDER_STATUS.delivered];
         const currentIndex = statuses.indexOf(status);
-        const progress = status === 'cancelled' || status === 'return'
+        const progress = status === ORDER_STATUS.cancelled || status === ORDER_STATUS.return
             ? 0
             : ((currentIndex + 1) / statuses.length) * 100;
+
+        console.log({ progress, currentIndex, statuses, status })
 
         return (
             <Card className="mb-6">
@@ -329,7 +335,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                                         key={key}
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => handleStatusUpdate(key)}
+                                        onClick={() => handleStatusUpdate(key as ORDER_STATUS)}
                                         disabled={updateOrderStatusMutation.isPending}
                                         className="text-xs"
                                     >
@@ -340,7 +346,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                         </div>
                     </div>
                 </CardHeader>
-                {status !== 'cancelled' && status !== 'return' && (
+                {status !== ORDER_STATUS.cancelled && status !== ORDER_STATUS.return && (
                     <CardContent>
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-medium">Progress</span>
@@ -356,7 +362,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                                         i <= currentIndex ? 'text-foreground font-semibold' : ''
                                     )}
                                 >
-                                    {s.replace('outfordeliver', 'out for delivery')}
+                                    {ORDER_STATUS[s].replace('outfordeliver', 'out for delivery')}
                                 </span>
                             ))}
                         </div>
@@ -504,6 +510,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
     }
 
     const totalAmount = calculateOrderTotal();
+    console.log({ totalAmount })
 
     return (
         <div className="min-h-screen bg-background">
@@ -531,7 +538,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                 </div>
 
                 {/* Status Tracker */}
-                <OrderStatusTracker status={order?.status as unknown as keyof typeof ORDER_STATUS_CONFIG} />
+                <OrderStatusTracker status={order.status} />
 
                 {/* Order Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -584,13 +591,13 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                                 <div>
                                     <p className="text-sm text-muted-foreground">Order Mode</p>
                                     <Badge variant="secondary" className="mt-1">
-                                        {order.mode}
+                                        {ORDER_MODE[order.mode] || order.mode}
                                     </Badge>
                                 </div>
                                 <div>
                                     <p className="text-sm text-muted-foreground">Payment Method</p>
                                     <Badge variant="secondary" className="mt-1">
-                                        {order.paymentMode}
+                                        {ORDER_PAYMENT_MODE[order.paymentMode] || order.paymentMode}
                                     </Badge>
                                 </div>
                             </div>
@@ -650,7 +657,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                                             <tr key={index} className="border-b transition-colors hover:bg-muted/50">
                                                 <td className="p-4 align-middle">
                                                     <div className="flex items-center gap-3">
-                                                        {item.productId?.image && (
+                                                        {typeof item.productId !== 'string' && item.productId?.image && (
                                                             <img
                                                                 src={item.productId.image}
                                                                 alt={item.productId.name || 'Product'}
@@ -659,10 +666,10 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                                                         )}
                                                         <div>
                                                             <p className="font-medium">
-                                                                {item.productId?.name || 'Unknown Product'}
+                                                                {typeof item.productId !== 'string' ? item.productId?.name : 'Unknown Product'}
                                                             </p>
                                                             <p className="text-sm text-muted-foreground">
-                                                                {item.productId?.description || ''}
+                                                                {typeof item.productId !== 'string' ? item.productId?.description : ''}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -838,7 +845,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                                                 </div>
                                                 <div>
                                                     <p className="font-medium text-sm">
-                                                        {comment.user}
+                                                        {comment.user.name}
                                                     </p>
                                                     <p className="text-xs text-muted-foreground">
                                                         {formatDate(new Date())}
@@ -874,13 +881,13 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                     {order.status !== ORDER_STATUS.delivered && order.status !== ORDER_STATUS.cancelled && (
                         <Button
                             onClick={() => {
-                                const nextStatus: keyof typeof ORDER_STATUS_CONFIG = order.status === ORDER_STATUS.pending ? ORDER_STATUS.confirmed :
+                                const nextStatus: ORDER_STATUS = order.status === ORDER_STATUS.pending ? ORDER_STATUS.confirmed :
                                     order.status === ORDER_STATUS.confirmed ? ORDER_STATUS.packed :
                                         order.status === ORDER_STATUS.packed ? ORDER_STATUS.dispatched :
-                                            order.status === ORDER_STATUS.dispatched ? ORDER_STATUS.dispatched :
+                                            order.status === ORDER_STATUS.dispatched ? ORDER_STATUS.outfordeliver :
                                                 order.status === ORDER_STATUS.outfordeliver ? ORDER_STATUS.delivered : order.status;
 
-                                if (nextStatus != order.status) {
+                                if (nextStatus !== order.status) {
                                     handleStatusUpdate(nextStatus);
                                 }
                             }}
