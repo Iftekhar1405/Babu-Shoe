@@ -236,6 +236,26 @@ export function SearchBar({
                             )}
                           </div>
 
+                          {/* Tags */}
+                          {product.tags && product.tags.length > 0 && (
+                            <div className="flex items-center gap-1 mt-1 flex-wrap">
+                              <span className="text-xs text-gray-500">Tags:</span>
+                              {product.tags.slice(0, 3).map((tag, idx) => (
+                                <span
+                                  key={typeof tag === 'string' ? tag : tag._id || idx}
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-purple-100 text-purple-700 border border-purple-200"
+                                >
+                                  {typeof tag === 'string' ? tag : tag.name || 'Tag'}
+                                </span>
+                              ))}
+                              {product.tags.length > 3 && (
+                                <span className="text-xs text-gray-500">
+                                  +{product.tags.length - 3} more
+                                </span>
+                              )}
+                            </div>
+                          )}
+
                           {/* Available Sizes */}
                           {product.sizes && product.sizes.length > 0 && (
                             <div className="flex items-center gap-1 mt-1">

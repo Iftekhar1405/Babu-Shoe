@@ -1,5 +1,5 @@
 
-import { AuthResponse, LoginDto, RegisterDto, User } from '@/types/auth.type';
+import { AuthResponse, LoginData, RegisterData, User } from '@/types/auth.type';
 import { ApiError } from './api-advance';
 
 const API_BASE_URL = 'http://localhost:8080/api';
@@ -43,14 +43,14 @@ export class AuthApiClient {
     }
   }
 
-  async login(loginData: LoginDto): Promise<AuthResponse> {
+  async login(loginData: LoginData): Promise<AuthResponse> {
     return this.request<AuthResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(loginData),
     });
   }
 
-  async register(registerData: RegisterDto): Promise<AuthResponse> {
+  async register(registerData: RegisterData): Promise<AuthResponse> {
     return this.request<AuthResponse>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(registerData),

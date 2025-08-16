@@ -8,30 +8,40 @@ import { SearchBar } from '@/components/SearchBar';
 import { BillDrawer } from '@/components/BillDrawer';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, ShoppingBag } from 'lucide-react';
-import { Category, Product, ProductDetail } from '@/types';
-import { handlePrintBill } from '@/components/handlePrintBill';
-import { useCategories, useProducts, useProductSearch } from '@/lib/api-advance';
+import { ArrowLeft, ShoppingBag, Loader2 } from 'lucide-react';
+import { CustomerInfo, Product, ProductDetail } from '@/types';
+import { useCategories, useProducts, useProductSearch, useCurrentBill } from '@/lib/api-advance';
+import { useAuth } from '@/lib/auth-hooks';
+
 
 export default function ProductsPage() {
   const searchParams = useSearchParams();
   const categoryId = searchParams.get('category');
   const [filteredProducts, setFilteredProducts] = useState<Product<true>[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryId || 'all');
-  const [billItems, setBillItems] = useState<ProductDetail[]>([]);
   const [isBillOpen, setIsBillOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchMode, setIsSearchMode] = useState(false);
 
-  const { data: categories, isLoading: categoryLoading, refetch: categoryRefetch } = useCategories();
-  const { data: products, isLoading: productsLoading, refetch: productsRefetch } = useProducts();
+  const { isAuthenticated } = useAuth();
   
-  // Search results from API
-  const { 
-    data: searchResults, 
-    isLoading: searchLoading, 
-    error: searchError 
-  } = useProductSearch(searchQuery);
+  // API hooks
+  const { data: categories, isLoading: categoryLoading } = useCategories();
+  const { data: products, isLoading: productsLoading } = useProducts();
+  const { data: searchResults, isLoading: searchLoading, error: searchError } = useProductSearch(searchQuery);
+  
+  // Current bill from API - only for authenticated users
+const { data: bill, isLoading: billLoading, refetch: refetchBill } = useCurrentBill({
+  enabled: isAuthenticated,
+});
+
+// Now bill can be Bill | null | undefined
+// Use it like: bill?.items?.length > 0
+
+  // Get bill items and total from API
+  const billItems = bill?.items || [];
+  const billItemsCount = billItems.reduce((sum, item) => sum + item.quantity, 0);
+  const billTotal = bill?.totalAmount || 0;
 
   useEffect(() => {
     if (categoryId) {
@@ -42,16 +52,21 @@ export default function ProductsPage() {
   useEffect(() => {
     if (searchQuery.trim()) {
       setIsSearchMode(true);
-      // When searching, use search results from API
       if (searchResults && !searchLoading) {
         setFilteredProducts(searchResults);
       }
     } else {
       setIsSearchMode(false);
-      // When not searching, use regular filtering
       filterProducts();
     }
   }, [products, selectedCategory, searchQuery, searchResults, searchLoading]);
+
+  // Refresh when bill opens
+  useEffect(() => {
+    if (isBillOpen && isAuthenticated) {
+      refetchBill();
+    }
+  }, [isBillOpen, isAuthenticated, refetchBill]);
 
   const filterProducts = () => {
     if (!products) return;
@@ -70,53 +85,21 @@ export default function ProductsPage() {
     setSearchQuery(query);
     if (!query.trim()) {
       setIsSearchMode(false);
-      setSelectedCategory('all'); // Reset category when clearing search
+      setSelectedCategory('all'); 
     }
   };
 
-  const handleAddToBill = (product: Product<true>) => {
-    setBillItems(prev => {
-      const existingItem = prev.find(item => item.productId._id === product._id);
-      if (existingItem) {
-        return prev.map(item =>
-          item.productId._id === product._id
-            ? {
-              ...item,
-              quantity: item.quantity + 1,
-              finalPrice: product.price * (item.quantity + 1) * (1 - item.discountPercent / 100)
-            }
-            : item
-        );
-      } else {
-        return [...prev, {
-          productId: product,
-          quantity: 1,
-          discountPercent: 0,
-          finalPrice: product.price
-        }];
-      }
-    });
+  const handlePrintBillWithCustomer = (items: ProductDetail<true>[], customerInfo: CustomerInfo) => {
+
+    console.log('Printing bill for:', customerInfo);
   };
 
-  const handleUpdateBillItem = (productId: string, updates: Partial<ProductDetail>) => {
-    setBillItems(prev =>
-      prev.map(item =>
-        item.productId._id === productId ? { ...item, ...updates } : item
-      )
-    );
-  };
-
-  const handleRemoveBillItem = (productId: string) => {
-    setBillItems(prev => prev.filter(item => item.productId._id !== productId));
-  };
-
-  const handleClearBill = () => {
-    setBillItems([]);
+  const handleAddToOrder = (items: ProductDetail<true>[], customerInfo: CustomerInfo) => {
+    console.log('Adding to order:', { items, customerInfo });
   };
 
   const getCategoryName = (id: string) => {
     if (!categories) return 'Unknown Category';
-
     const category = categories.find(cat => cat._id === id);
     return category ? category.name : 'Unknown Category';
   };
@@ -142,7 +125,10 @@ export default function ProductsPage() {
   if (categoryLoading || productsLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-4 mx-auto" />
+          <div className="text-lg text-gray-600">Loading products...</div>
+        </div>
       </div>
     );
   }
@@ -166,20 +152,45 @@ export default function ProductsPage() {
             <div className="flex-1 max-w-md mx-8">
               <SearchBar 
                 onSearch={handleSearchQueryChange} 
-                onAddToBill={handleAddToBill}
                 placeholder="Search products..." 
               />
             </div>
 
             <div className="flex items-center space-x-4">
-              <Button
-                onClick={() => setIsBillOpen(true)}
-                variant="outline"
-                className="relative border-gray-300 hover:bg-gray-50"
-              >
-                <ShoppingBag className="h-5 w-5 mr-2" />
-                Bill ({billItems.length})
-              </Button>
+              {isAuthenticated ? (
+                <Button
+                  onClick={() => setIsBillOpen(true)}
+                  variant="outline"
+                  className="relative border-gray-300 hover:bg-gray-50"
+                  disabled={billLoading}
+                >
+                  {billLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingBag className="h-5 w-5 mr-2" />
+                      Bill ({billItemsCount})
+                      {billItemsCount > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                          {billItemsCount}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <div className="flex items-center space-x-3">
+                  <span className="text-sm text-gray-600">Sign in to use cart</span>
+                  <Link href="/auth/login">
+                    <Button size="sm" className="bg-black hover:bg-gray-800 text-white">
+                      Sign In
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -206,6 +217,14 @@ export default function ProductsPage() {
                   </SelectContent>
                 </Select>
               </div>
+              
+              {/* Category count info */}
+              <div className="text-sm text-gray-500">
+                {selectedCategory === 'all' 
+                  ? `Showing all ${filteredProducts.length} products`
+                  : `${filteredProducts.length} products in ${getCategoryName(selectedCategory)}`
+                }
+              </div>
             </div>
           </div>
         )}
@@ -217,6 +236,7 @@ export default function ProductsPage() {
               <div className="flex items-center space-x-2">
                 <span className="text-blue-800 font-medium">🔍 Search Mode Active</span>
                 <span className="text-blue-600">Showing search results for "{searchQuery}"</span>
+                {searchLoading && <Loader2 className="h-4 w-4 animate-spin text-blue-600" />}
               </div>
               <Button
                 variant="ghost"
@@ -230,7 +250,32 @@ export default function ProductsPage() {
           </div>
         )}
 
-        {/* Results */}
+        {/* Authentication Notice for Non-Authenticated Users */}
+        {!isAuthenticated && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-center space-x-3">
+              <ShoppingBag className="h-5 w-5 text-amber-600" />
+              <div>
+                <p className="text-amber-800 font-medium">Sign in to add products to your bill</p>
+                <p className="text-amber-700 text-sm">Create an account or sign in to access billing features.</p>
+              </div>
+              <div className="flex space-x-2">
+                <Link href="/auth/login">
+                  <Button size="sm" variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-100">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link href="/auth/register">
+                  <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white">
+                    Register
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Results Header */}
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-900">
             {getResultsTitle()}
@@ -245,57 +290,70 @@ export default function ProductsPage() {
         {/* Loading State */}
         {searchLoading && isSearchMode && (
           <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-            <p className="text-gray-500 mt-4">Searching products...</p>
+            <Loader2 className="h-12 w-12 animate-spin text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500">Searching products...</p>
           </div>
         )}
 
-        {/* Products Grid */}
-        {!searchLoading && filteredProducts.length === 0 ? (
+        {/* Empty State */}
+        {!searchLoading && filteredProducts.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500">
+            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ShoppingBag className="h-12 w-12 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
+            <p className="text-gray-500 mb-4">
               {isSearchMode && searchQuery
-                ? `No products found matching "${searchQuery}".`
+                ? `No products match your search for "${searchQuery}".`
                 : selectedCategory === 'all'
-                  ? "No products available."
+                  ? "No products are available at the moment."
                   : `No products found in ${getCategoryName(selectedCategory)}.`
               }
             </p>
             {isSearchMode && (
               <Button
                 variant="outline"
-                className="mt-4"
                 onClick={() => handleSearchQueryChange('')}
+                className="border-gray-300 hover:bg-gray-50"
               >
                 View All Products
               </Button>
             )}
           </div>
-        ) : (
-          !searchLoading && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {filteredProducts.map((product) => (
-                <ProductCard
-                  key={product._id}
-                  product={product}
-                  onAddToBill={handleAddToBill}
-                />
-              ))}
-            </div>
-          )
+        )}
+
+        {/* Products Grid */}
+        {!searchLoading && filteredProducts.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {filteredProducts.map((product) => (
+              <ProductCard
+                key={product._id}
+                product={product}
+                showAddToBill={isAuthenticated}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Load More Button (for future pagination) */}
+        {!searchLoading && filteredProducts.length > 0 && filteredProducts.length >= 20 && (
+          <div className="text-center mt-8">
+            <Button variant="outline" className="border-gray-300 hover:bg-gray-50">
+              Load More Products
+            </Button>
+          </div>
         )}
       </main>
 
       {/* Bill Drawer */}
-      <BillDrawer
-        isOpen={isBillOpen}
-        onClose={() => setIsBillOpen(false)}
-        items={billItems}
-        onUpdateItem={handleUpdateBillItem}
-        onRemoveItem={handleRemoveBillItem}
-        onClearBill={handleClearBill}
-        onPrintBill={() => handlePrintBill(billItems)}
-      />
+      {isAuthenticated && (
+        <BillDrawer
+          isOpen={isBillOpen}
+          onClose={() => setIsBillOpen(false)}
+          // onPrintBill={handlePrintBillWithCustomer}
+          // onAddToOrder={handleAddToOrder}
+        />
+      )}
     </div>
   );
 }

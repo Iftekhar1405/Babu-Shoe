@@ -84,7 +84,7 @@ export interface Order<e extends boolean = true> {
   orderNumber: number;
   customerName: string;
   customerId?: e extends true ? { name: string; _id: string } : string; // optional populated customer structure
-  items: ProductDetail<e>[];
+  productDetails: ProductDetail<e>[];
   totalAmount: number;
   status: ORDER_STATUS;
   progress: number;
@@ -124,4 +124,83 @@ export type CreateOrder = {
 export type Tag = {
   _id?: string,
   name: string,
+}
+
+export interface CreateOrderFromBillDto {
+  name: string;
+  productDetails: {
+    productId: string;
+    quatity: number; // Note: keeping the typo to match backend
+    color: string;
+    amount: number;
+    discountPercent: number;
+  }[];
+  mode: string;
+  paymentMode: string;
+  address: string;
+  phoneNumber: string;
+}
+
+
+
+export interface CustomerInfo {
+  customerName: string;
+  phoneNumber: string;
+  mode: ORDER_MODE;
+  paymentMode: ORDER_PAYMENT_MODE;
+  address?: string; 
+}
+
+export interface OrderResponse {
+  _id: string;
+  user: string;
+  name: string;
+  productDetails: {
+    productId: string | { name: string; articleNo: string };
+    quatity: number;
+    color: string;
+    amount: number;
+    discountPercent: number;
+    salesPerson?: string;
+  }[];
+  mode: string;
+  paymentMode: string;
+  orderNumber: number;
+  address: string;
+  status: string;
+  phoneNumber: string;
+  comments: any[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HeaderProps {
+  onSearch?: (query: string) => void;
+  onOpenBill?: () => void;
+  showSearch?: boolean;
+  onMenuToggle?: () => void;
+}
+
+
+// Orders interface and type
+
+export interface OrderFilters {
+  search?: string;
+  status?: string;
+  mode?: string;
+  paymentMode?: string;
+  page?: number;
+  limit?: number;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface PaginatedOrderResponse {
+  data: Order<true>[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }

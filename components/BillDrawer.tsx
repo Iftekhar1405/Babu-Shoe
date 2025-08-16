@@ -1,105 +1,222 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { X, Printer, Trash2, Minus, Plus, ShoppingBag, User, Package } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { X, Printer, Trash2, Minus, Plus, ShoppingBag, User, Package, Loader2, CheckCircle, MapPin } from 'lucide-react';
 import Image from 'next/image';
-import { ProductDetail, Product, ColorData, ORDER_MODE, ORDER_PAYMENT_MODE } from '@/types';
+import { Product, ColorData, ORDER_MODE, ORDER_PAYMENT_MODE, Bill, ProductDetail, OrderResponse, CustomerInfo } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { 
+  useCurrentBill, 
+  useClearBill, 
+  useOptimisticBillUpdates,
+  useUpdateBillItemMutation,
+  useRemoveBillItemMutation,
+  useCreateOrderFromBill
+} from '@/lib/api-advance';
+import { useDebounce } from '@/hooks/use-debounce';
+import { handlePrintBillWithCustomerInfo } from './handlePrintBill';
 
 interface BillDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  items: ProductDetail<true>[];
-  onUpdateItem: (productId: string, color: string, updates: Partial<ProductDetail<true>>) => void;
-  onRemoveItem: (productId: string, color: string) => void;
-  onClearBill: () => void;
-  onPrintBill: (items: ProductDetail<true>[], customerInfo: CustomerInfo) => void;
-  onAddToOrder: (items: ProductDetail<true>[], customerInfo: CustomerInfo) => void;
 }
 
-interface CustomerInfo {
-  customerName: string;
-  phoneNumber: string;
-  mode: ORDER_MODE;
-  paymentMode: ORDER_PAYMENT_MODE;
-}
 
-export function BillDrawer({
-  isOpen,
-  onClose,
-  items,
-  onUpdateItem,
-  onRemoveItem,
-  onClearBill,
-  onPrintBill,
-  onAddToOrder,
-}: BillDrawerProps) {
-  const [localItems, setLocalItems] = useState<ProductDetail<true>[]>(items);
-  const [dialogOpen, setDialogOpen] = useState(false);
+
+export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
+  const [orderSummaryOpen, setOrderSummaryOpen] = useState(false);
+  const [createdOrder, setCreatedOrder] = useState<OrderResponse | null>(null);
+  
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     customerName: '',
     phoneNumber: '',
     mode: ORDER_MODE.offline,
     paymentMode: ORDER_PAYMENT_MODE.Cash,
+    address: '',
   });
+  
+  const [discountInputs, setDiscountInputs] = useState<Record<string, number>>({});
+  const debouncedDiscountInputs = useDebounce(discountInputs, 800);
+
+  // API hooks
+  const { data: bill, isLoading, error, refetch } = useCurrentBill();
+  const clearBillMutation = useClearBill();
+  const updateBillItemMutation = useUpdateBillItemMutation();
+  const removeBillItemMutation = useRemoveBillItemMutation();
+  const createOrderMutation = useCreateOrderFromBill();
+  const optimisticUpdates = useOptimisticBillUpdates();
+
+  const items = bill?.items || [];
+  const total = bill?.totalAmount || 0;
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  const [quantityInputs, setQuantityInputs] = useState<Record<string, number>>({});
+  const debouncedQuantityInputs = useDebounce(quantityInputs, 800);
 
   useEffect(() => {
-    setLocalItems(items);
+    if (isOpen) {
+      refetch();
+    }
+  }, [isOpen, refetch]);
+
+  useEffect(() => {
+    if (items.length > 0) {
+      const initialDiscounts: Record<string, number> = {};
+      const initialQuantities: Record<string, number> = {};
+      
+      items.forEach(item => {
+        const key = `${item.productId._id}-${item.color || ''}`;
+        initialDiscounts[key] = item.discountPercent;
+        initialQuantities[key] = item.quantity;
+      });
+      
+      setDiscountInputs(initialDiscounts);
+      setQuantityInputs(initialQuantities);
+    }
   }, [items]);
 
-  const calculateFinalPrice = (item: ProductDetail<true>) => {
-    const basePrice = (item.productId.price * item.quantity);
-    const discountAmount = (basePrice * item.discountPercent) / 100;
-    return basePrice - discountAmount;
-  };
+  // Handle debounced discount updates
+  useEffect(() => {
+    const handleDebouncedDiscountUpdates = async () => {
+      for (const [key, debouncedDiscount] of Object.entries(debouncedDiscountInputs)) {
+        const [productId, color] = key.split('-');
+        const currentItem = items.find(item => 
+          item.productId._id === productId && item.color === (color || '')
+        );
 
-  const handleQuantityChange = (productId: string, color: string, newQuantity: number) => {
+        if (!currentItem || updateBillItemMutation.isPending) continue;
+
+        if (currentItem.discountPercent !== debouncedDiscount) {
+          try {
+            await updateBillItemMutation.mutateAsync({
+              productId,
+              color: color || undefined,
+              discountPercent: debouncedDiscount
+            });
+          } catch (error) {
+            console.error('Failed to update discount:', error);
+            setDiscountInputs(prev => ({
+              ...prev,
+              [key]: currentItem.discountPercent
+            }));
+            toast.error('Failed to update discount');
+          }
+        }
+      }
+    };
+
+    if (Object.keys(debouncedDiscountInputs).length > 0) {
+      handleDebouncedDiscountUpdates();
+    }
+  }, [debouncedDiscountInputs, items, updateBillItemMutation.isPending]);
+
+  // Handle debounced quantity updates
+  useEffect(() => {
+    const handleDebouncedQuantityUpdates = async () => {
+      for (const [key, debouncedQuantity] of Object.entries(debouncedQuantityInputs)) {
+        const [productId, color] = key.split('-');
+        const currentItem = items.find(item =>
+          item.productId._id === productId && item.color === (color || '')
+        );
+
+        if (!currentItem || updateBillItemMutation.isPending) continue;
+
+        if (currentItem.quantity !== debouncedQuantity) {
+          try {
+            await updateBillItemMutation.mutateAsync({
+              productId,
+              color: color || undefined,
+              quantity: debouncedQuantity
+            });
+          } catch (error) {
+            console.error('Failed to update quantity:', error);
+            setQuantityInputs(prev => ({
+              ...prev,
+              [key]: currentItem.quantity
+            }));
+            toast.error('Failed to update quantity');
+          }
+        }
+      }
+    };
+
+    if (Object.keys(debouncedQuantityInputs).length > 0) {
+      handleDebouncedQuantityUpdates();
+    }
+  }, [debouncedQuantityInputs, items, updateBillItemMutation.isPending]);
+
+  const handleQuantityInputChange = useCallback((productId: string, color: string, newQuantity: number) => {
     if (newQuantity < 1) return;
+    
+    const key = `${productId}-${color}`;
+    setQuantityInputs(prev => ({
+      ...prev,
+      [key]: newQuantity
+    }));
+  }, []);
 
-    const itemKey = `${productId}-${color}`;
-    const item = localItems.find(item =>
-      item.productId._id === productId && item.color === color
-    );
+  const handleDiscountInputChange = useCallback((productId: string, color: string, discount: number) => {
+    if (discount < 0 || discount > 100) return;
+    
+    const key = `${productId}-${color}`;
+    setDiscountInputs(prev => ({
+      ...prev,
+      [key]: discount
+    }));
+  }, []);
 
-    if (!item) return;
+  const handleQuantityButtonClick = useCallback((productId: string, color: string, increment: number) => {
+    const key = `${productId}-${color}`;
+    const currentQuantity = quantityInputs[key] ?? 
+      items.find(item => item.productId._id === productId && item.color === color)?.quantity ?? 1;
+    
+    const newQuantity = currentQuantity + increment;
+    if (newQuantity < 1) return;
+    
+    setQuantityInputs(prev => ({
+      ...prev,
+      [key]: newQuantity
+    }));
+  }, [quantityInputs, items]);
 
-    const finalPrice = calculateFinalPrice({ ...item, quantity: newQuantity });
-    const updatedItems = localItems.map(item =>
-      (item.productId._id === productId && item.color === color)
-        ? { ...item, quantity: newQuantity, finalPrice }
-        : item
-    );
+  const handleRemoveItem = async (productId: string, color: string) => {
+    optimisticUpdates.removeItemOptimistically(productId, color);
 
-    setLocalItems(updatedItems);
-    onUpdateItem(productId, color, { quantity: newQuantity, finalPrice });
+    try {
+      await removeBillItemMutation.mutateAsync({
+        productId,
+        color
+      });
+
+      toast.success('Item removed from bill');
+    } catch (error) {
+      console.error('Failed to remove item:', error);
+      await refetch();
+      toast.error('Failed to remove item');
+    }
   };
 
-  const handleDiscountChange = (productId: string, color: string, discount: number) => {
-    if (discount < 0 || discount > 100) return;
+  const handleClearBill = async () => {
+    optimisticUpdates.clearBillOptimistically();
 
-    const item = localItems.find(item =>
-      item.productId._id === productId && item.color === color
-    );
-
-    if (!item) return;
-
-    const finalPrice = calculateFinalPrice({ ...item, discountPercent: discount });
-    const updatedItems = localItems.map(item =>
-      (item.productId._id === productId && item.color === color)
-        ? { ...item, discountPercent: discount, finalPrice }
-        : item
-    );
-
-    setLocalItems(updatedItems);
-    onUpdateItem(productId, color, { discountPercent: discount, finalPrice });
+    try {
+      await clearBillMutation.mutateAsync();
+      toast.success('Bill cleared');
+    } catch (error) {
+      console.error('Failed to clear bill:', error);
+      await refetch();
+      toast.error('Failed to clear bill');
+    }
   };
 
   const getColorImage = (product: Product<true>, colorName: string) => {
@@ -107,52 +224,122 @@ export function BillDrawer({
     return colorData?.urls?.[0] || product.image;
   };
 
-  const total = localItems.reduce((sum, item) => sum + item.finalPrice, 0);
-  const totalItems = localItems.reduce((sum, item) => sum + item.quantity, 0);
-
-  const handlePrintBill = () => {
-    setDialogOpen(true);
+  const openCustomerDialog = () => {
+    setCustomerDialogOpen(true);
   };
 
-  const validateCustomerInfo = () => {
+  const validateCustomerInfo = (requireAddress: boolean = false) => {
     if (!customerInfo.customerName.trim()) {
-      toast('Error', { description: 'Customer name is required' });
+      toast.error('Customer name is required');
       return false;
     }
     if (!customerInfo.phoneNumber.trim()) {
-      toast('Error', { description: 'Phone number is required' });
+      toast.error('Phone number is required');
       return false;
     }
     if (customerInfo.phoneNumber.length < 10) {
-      toast('Error', { description: 'Please enter a valid phone number' });
+      toast.error('Please enter a valid phone number');
+      return false;
+    }
+    if (requireAddress && !customerInfo.address?.trim()) {
+      toast.error('Address is required for orders');
       return false;
     }
     return true;
   };
 
-  const handleAddToOrder = () => {
-    if (!validateCustomerInfo()) return;
-    setDialogOpen(false);
-    onAddToOrder(localItems, customerInfo);
+  const resetCustomerInfo = () => {
     setCustomerInfo({
       customerName: '',
       phoneNumber: '',
       mode: ORDER_MODE.offline,
       paymentMode: ORDER_PAYMENT_MODE.Cash,
+      address: '',
     });
   };
 
-  const handleJustPrintBill = () => {
-    if (!validateCustomerInfo()) return;
-    setDialogOpen(false);
-    onPrintBill(localItems, customerInfo);
-    setCustomerInfo({
-      customerName: '',
-      phoneNumber: '',
-      mode: ORDER_MODE.offline,
-      paymentMode: ORDER_PAYMENT_MODE.Cash,
-    });
+  const handleCreateOrder = async () => {
+    if (!validateCustomerInfo(true)) return;
+
+    try {
+      const orderData = {
+        name: customerInfo.customerName,
+        productDetails: items.map(item => ({
+          productId: item.productId._id!,
+          quatity: item.quantity, // Note: keeping the typo to match backend
+          color: item.color || '',
+          amount: item.productId.price,
+          discountPercent: item.discountPercent
+        })),
+        mode: ORDER_MODE[customerInfo.mode],
+        paymentMode: ORDER_PAYMENT_MODE[customerInfo.paymentMode],
+        address: customerInfo.address!,
+        phoneNumber: customerInfo.phoneNumber
+      };
+
+      const createdOrder = await createOrderMutation.mutateAsync(orderData);
+      
+      setCreatedOrder(createdOrder);
+      setCustomerDialogOpen(false);
+      setOrderSummaryOpen(true);
+      
+      toast.success(`Order #${createdOrder.orderNumber} placed successfully!`);
+      
+      // Clear bill and reset form
+      resetCustomerInfo();
+    } catch (error) {
+      console.error('Failed to create order:', error);
+      toast.error('Failed to place order. Please try again.');
+    }
   };
+
+  const handlePrintBill = () => {
+    if (!validateCustomerInfo(false)) return;
+    
+    setCustomerDialogOpen(false);
+    handlePrintBillWithCustomerInfo(items, customerInfo);
+    
+    // Clear bill and reset form after printing
+    handleClearBill();
+    resetCustomerInfo();
+    onClose();
+  };
+
+  const handlePrintOrderSummary = () => {
+    if (createdOrder) {
+      // Convert order data back to bill format for printing
+      const printItems: ProductDetail<true>[] = createdOrder.productDetails.map(pd => {
+        const originalItem = items.find(item => item.productId._id === pd.productId);
+        return {
+          productId: originalItem?.productId!,
+          quantity: pd.quatity,
+          color: pd.color,
+          discountPercent: pd.discountPercent,
+          finalPrice: (pd.amount * pd.quatity) * (1 - pd.discountPercent / 100),
+          salesPerson: pd.salesPerson
+        };
+      });
+
+      const customerData = {
+        customerName: createdOrder.name,
+        phoneNumber: createdOrder.phoneNumber,
+        mode: ORDER_MODE[createdOrder.mode as keyof typeof ORDER_MODE],
+        paymentMode: ORDER_PAYMENT_MODE[createdOrder.paymentMode as keyof typeof ORDER_PAYMENT_MODE],
+        address: createdOrder.address
+      };
+
+      handlePrintBillWithCustomerInfo(printItems, customerData);
+    }
+  };
+
+  const handleCloseOrderSummary = () => {
+    setOrderSummaryOpen(false);
+    setCreatedOrder(null);
+    onClose();
+  };
+
+  const isUpdatingItem = updateBillItemMutation.isPending;
+  const isRemovingItem = removeBillItemMutation.isPending;
 
   if (!isOpen) return null;
 
@@ -170,7 +357,7 @@ export function BillDrawer({
         <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Bill Summary</h2>
-            {localItems.length > 0 && (
+            {items.length > 0 && (
               <p className="text-sm text-gray-600 mt-1">
                 {totalItems} item{totalItems !== 1 ? 's' : ''} • ₹{total.toFixed(2)}
               </p>
@@ -183,7 +370,23 @@ export function BillDrawer({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
-          {localItems.length === 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center h-full text-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-4" />
+              <p className="text-gray-500">Loading bill...</p>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center h-full text-center p-8">
+              <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <X className="h-12 w-12 text-red-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Error loading bill</h3>
+              <p className="text-gray-500 mb-4">Please try again</p>
+              <Button onClick={() => refetch()} variant="outline">
+                Retry
+              </Button>
+            </div>
+          ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center p-8">
               <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                 <ShoppingBag className="h-12 w-12 text-gray-400" />
@@ -193,7 +396,7 @@ export function BillDrawer({
             </div>
           ) : (
             <div className="p-4 space-y-4">
-              {localItems.map((item, index) => (
+              {items.map((item, index) => (
                 <Card key={`${item.productId._id}-${item.color}-${index}`} className="border-gray-200 hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
                     <div className="flex gap-4">
@@ -239,29 +442,50 @@ export function BillDrawer({
                               variant="outline"
                               size="sm"
                               className="h-7 w-7 p-0"
-                              onClick={() => handleQuantityChange(
+                              onClick={() => handleQuantityButtonClick(
                                 item.productId._id!,
                                 item.color || '',
-                                item.quantity - 1
+                                -1
                               )}
-                              disabled={item.quantity <= 1}
+                              disabled={
+                                (quantityInputs[`${item.productId._id}-${item.color || ''}`] ?? item.quantity) <= 1 || 
+                                isUpdatingItem
+                              }
                             >
-                              <Minus className="h-3 w-3" />
+                              {isUpdatingItem ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Minus className="h-3 w-3" />
+                              )}
                             </Button>
-                            <span className="text-sm font-semibold w-8 text-center">
-                              {item.quantity}
-                            </span>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={quantityInputs[`${item.productId._id}-${item.color || ''}`] ?? item.quantity}
+                              onChange={(e) => handleQuantityInputChange(
+                                item.productId._id!,
+                                item.color || '',
+                                parseInt(e.target.value) || 1
+                              )}
+                              className="h-7 w-16 text-sm text-center p-1"
+                              disabled={isUpdatingItem}
+                            />
                             <Button
                               variant="outline"
                               size="sm"
                               className="h-7 w-7 p-0"
-                              onClick={() => handleQuantityChange(
+                              onClick={() => handleQuantityButtonClick(
                                 item.productId._id!,
                                 item.color || '',
-                                item.quantity + 1
+                                1
                               )}
+                              disabled={isUpdatingItem}
                             >
-                              <Plus className="h-3 w-3" />
+                              {isUpdatingItem ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Plus className="h-3 w-3" />
+                              )}
                             </Button>
                           </div>
                         </div>
@@ -273,14 +497,15 @@ export function BillDrawer({
                             type="number"
                             min="0"
                             max="100"
-                            value={item.discountPercent}
-                            onChange={(e) => handleDiscountChange(
+                            value={discountInputs[`${item.productId._id}-${item.color || ''}`] ?? item.discountPercent}
+                            onChange={(e) => handleDiscountInputChange(
                               item.productId._id!,
                               item.color || '',
                               parseFloat(e.target.value) || 0
                             )}
                             className="h-8 text-sm mt-1"
                             placeholder="0"
+                            disabled={isUpdatingItem}
                           />
                         </div>
 
@@ -302,10 +527,15 @@ export function BillDrawer({
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => onRemoveItem(item.productId._id!, item.color || '')}
+                            onClick={() => handleRemoveItem(item.productId._id!, item.color || '')}
                             className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            disabled={isRemovingItem}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            {isRemovingItem ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
                           </Button>
                         </div>
                       </div>
@@ -318,20 +548,20 @@ export function BillDrawer({
         </div>
 
         {/* Footer */}
-        {localItems.length > 0 && (
+        {items.length > 0 && (
           <div className="border-t border-gray-200 bg-gray-50 p-6 space-y-4">
             {/* Total Summary */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600">Subtotal:</span>
                 <span className="font-medium">
-                  ₹{localItems.reduce((sum, item) => sum + (item.productId.price * item.quantity), 0).toFixed(2)}
+                  ₹{items.reduce((sum, item) => sum + (item.productId.price * item.quantity), 0).toFixed(2)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600">Total Discount:</span>
                 <span className="font-medium text-green-600">
-                  -₹{(localItems.reduce((sum, item) => sum + (item.productId.price * item.quantity), 0) - total).toFixed(2)}
+                  -₹{(items.reduce((sum, item) => sum + (item.productId.price * item.quantity), 0) - total).toFixed(2)}
                 </span>
               </div>
               <Separator />
@@ -344,27 +574,38 @@ export function BillDrawer({
             {/* Action Buttons */}
             <div className="flex flex-col gap-3">
               <Button
-                onClick={handlePrintBill}
+                onClick={openCustomerDialog}
                 className="w-full bg-black hover:bg-gray-800 text-white h-12 font-semibold"
+                disabled={isUpdatingItem || isRemovingItem}
               >
-                <Printer className="h-4 w-4 mr-2" />
+                <User className="h-4 w-4 mr-2" />
                 Process Bill
               </Button>
               <Button
                 variant="outline"
-                onClick={onClearBill}
+                onClick={handleClearBill}
+                disabled={clearBillMutation.isPending || isUpdatingItem || isRemovingItem}
                 className="w-full border-red-200 text-red-600 hover:bg-red-50 h-10"
               >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Clear All Items
+                {clearBillMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Clearing...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Clear All Items
+                  </>
+                )}
               </Button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Customer Info & Action Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {/* Customer Info Dialog - Single Modal for Both Actions */}
+      <Dialog open={customerDialogOpen} onOpenChange={setCustomerDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center">
@@ -397,6 +638,20 @@ export function BillDrawer({
                 onChange={(e) => setCustomerInfo(prev => ({ ...prev, phoneNumber: e.target.value }))}
                 placeholder="Enter phone number"
                 className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="address" className="text-sm font-medium">
+                Address <span className="text-gray-500 text-xs">(Required for orders)</span>
+              </Label>
+              <Textarea
+                id="address"
+                value={customerInfo.address}
+                onChange={(e) => setCustomerInfo(prev => ({ ...prev, address: e.target.value }))}
+                placeholder="Enter delivery address (optional for print only)"
+                className="mt-1"
+                rows={3}
               />
             </div>
 
@@ -448,19 +703,137 @@ export function BillDrawer({
 
           <DialogFooter className="flex flex-col gap-3">
             <Button
-              onClick={handleAddToOrder}
+              onClick={handleCreateOrder}
               className="w-full bg-black hover:bg-gray-800 text-white h-11"
+              disabled={createOrderMutation.isPending}
             >
-              <Package className="h-4 w-4 mr-2" />
-              Add to Order & Print Bill
+              {createOrderMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Placing Order...
+                </>
+              ) : (
+                <>
+                  <Package className="h-4 w-4 mr-2" />
+                  Place Order
+                </>
+              )}
             </Button>
             <Button
               variant="outline"
-              onClick={handleJustPrintBill}
+              onClick={handlePrintBill}
               className="w-full border-gray-300 hover:bg-gray-50 h-11"
             >
               <Printer className="h-4 w-4 mr-2" />
-              Just Print Bill
+              Print Bill Only
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Order Success Dialog */}
+      <Dialog open={orderSummaryOpen} onOpenChange={setOrderSummaryOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center text-green-600">
+              <CheckCircle className="h-6 w-6 mr-2" />
+              Order Placed Successfully!
+            </DialogTitle>
+          </DialogHeader>
+
+          {createdOrder && (
+            <div className="space-y-4 py-4">
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600 mb-1">
+                    Order #{createdOrder.orderNumber}
+                  </div>
+                  <div className="text-sm text-green-700">
+                    {new Date(createdOrder.createdAt).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Customer:</span>
+                  <span className="font-medium">{createdOrder.name}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Phone:</span>
+                  <span className="font-medium">{createdOrder.phoneNumber}</span>
+                </div>
+                <div className="flex items-start justify-between">
+                  <span className="text-sm text-gray-600">Address:</span>
+                  <span className="font-medium text-right flex-1 ml-4">{createdOrder.address}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Mode:</span>
+                  <span className="font-medium capitalize">{createdOrder.mode}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Payment:</span>
+                  <span className="font-medium">{createdOrder.paymentMode}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Status:</span>
+                  <Badge variant="secondary" className="capitalize">
+                    {createdOrder.status}
+                  </Badge>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <h4 className="font-semibold text-gray-900">Order Items:</h4>
+                {createdOrder.productDetails.map((item, index) => {
+                  const originalItem = items.find(billItem => billItem.productId._id === item.productId);
+                  const itemTotal = (item.amount * item.quatity) * (1 - item.discountPercent / 100);
+                  
+                  return (
+                    <div key={index} className="flex justify-between items-center text-sm py-1">
+                      <div className="flex-1">
+                        <div className="font-medium">
+                          {originalItem?.productId.name || 'Product'} - {item.color}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          ₹{item.amount} × {item.quatity} 
+                          {item.discountPercent > 0 && ` (-${item.discountPercent}%)`}
+                        </div>
+                      </div>
+                      <div className="font-medium">
+                        ₹{itemTotal.toFixed(2)}
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                <Separator />
+                <div className="flex justify-between font-bold text-lg pt-2">
+                  <span>Total Amount:</span>
+                  <span>₹{createdOrder.productDetails.reduce((sum, item) => {
+                    return sum + (item.amount * item.quatity) * (1 - item.discountPercent / 100);
+                  }, 0).toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex flex-col gap-3">
+            <Button
+              onClick={handlePrintOrderSummary}
+              className="w-full bg-black hover:bg-gray-800 text-white h-11"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Print Order Summary
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleCloseOrderSummary}
+              className="w-full h-11"
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -7,7 +7,7 @@ import {
   UseMutationOptions,
 } from '@tanstack/react-query';
 import { authApiClient } from './auth-api';
-import { AuthResponse, LoginDto, RegisterDto, User } from '@/types/auth.type';
+import { AuthResponse, LoginData, RegisterData, User } from '@/types/auth.type';
 import { ApiError } from './api-advance';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner'; // or your preferred toast library
@@ -53,13 +53,13 @@ export const useAdminCheck = <TData = { message: string; user: User }>(
 
 // Login Mutation
 export const useLogin = (
-  options?: UseMutationOptions<AuthResponse, ApiError, LoginDto>
+  options?: UseMutationOptions<AuthResponse, ApiError, LoginData>
 ) => {
   const queryClient = useQueryClient();
   const router = useRouter();
 
   return useMutation({
-    mutationFn: (loginData: LoginDto) => authApiClient.login(loginData),
+    mutationFn: (loginData: LoginData) => authApiClient.login(loginData),
     onSuccess: (data) => {
       // Set user profile in cache
       queryClient.setQueryData(authQueryKeys.profile(), data.user);
@@ -80,13 +80,13 @@ export const useLogin = (
 
 // Register Mutation
 export const useRegister = (
-  options?: UseMutationOptions<AuthResponse, ApiError, RegisterDto>
+  options?: UseMutationOptions<AuthResponse, ApiError, RegisterData>
 ) => {
   const queryClient = useQueryClient();
   const router = useRouter();
 
   return useMutation({
-    mutationFn: (registerData: RegisterDto) => authApiClient.register(registerData),
+    mutationFn: (registerData: RegisterData) => authApiClient.register(registerData),
     onSuccess: (data) => {
       // Set user profile in cache
       queryClient.setQueryData(authQueryKeys.profile(), data.user);

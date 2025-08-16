@@ -1,7 +1,6 @@
-// OrderDetailsPage.tsx
-'use client';
-
-import React, { useState, useEffect } from 'react';
+'use client'
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     Card,
     CardContent,
@@ -9,261 +8,662 @@ import {
     CardTitle,
     CardDescription,
 } from "@/components/ui/card";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import {
+    ArrowLeft,
+    Package,
+    Clock,
+    CheckCircle,
+    XCircle,
+    RefreshCw,
+    User,
+    MapPin,
+    Phone,
+    Calendar,
+    CreditCard,
+    Truck,
+    MessageSquare,
+    Edit,
+    Save,
+    X
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useOrder, useUpdateOrderStatus } from '@/lib/api-advance';
 
-// Mock order data (use your original mockOrderData object here)
-const mockOrderData = {
-    _id: '65f6d7a8b9c0d1e2f3a4b5c6',
-    user: '65f6d7a8b9c0d1e2f3a4b5c7', // Mock User ID
-    userName: 'John Doe', // Added for display
-    userEmail: 'john.doe@example.com', // Added as an 'article' equivalent for user
-    productDetails: [
-        {
-            projectId: '65f6d7a8b9c0d1e2f3a4b5c8', // Mock Project ID
-            productName: 'Premium Wireless Headphones', // Added for display
-            productArticle: 'High-fidelity audio with noise cancellation.', // Added as an 'article' equivalent for product
-            quatity: 2,
-            color: 'Black',
-            amount: 1200.00,
-            discountPercent: 10,
-        },
-        {
-            projectId: '65f6d7a8b9c0d1e2f3a4b5c9', // Mock Project ID
-            productName: 'Ergonomic Desk Chair',
-            productArticle: 'Adjustable lumbar support for ultimate comfort.',
-            quatity: 1,
-            color: 'White',
-            amount: 800.00,
-            discountPercent: 0,
-        },
-        {
-            projectId: '65f6d7a8b9c0d1e2f3a4b5ca', // Mock Project ID
-            productName: 'Smart Home Hub',
-            productArticle: 'Central control for all your smart devices.',
-            quatity: 3,
-            color: 'Blue',
-            amount: 500.00,
-            discountPercent: 5,
-        },
-    ],
-    mode: 'online',
-    paymentMode: 'UPI',
-    orderNumber: 10012345,
-    address: '65f6d7a8b9c0d1e2f3a4b5cb', // Mock Address ID
-    addressDetails: { // Added for display
-        name: 'Home Address',
-        fullAddress: '123, Main Street, Anytown, State - 123456', // Added as an 'article' equivalent for address
+// Order status configuration
+const ORDER_STATUS_CONFIG = {
+    pending: {
+        label: 'Pending',
+        color: 'bg-yellow-500/20 text-yellow-600',
+        icon: Clock,
+        bgColor: 'bg-yellow-500'
     },
-    status: 'packed', // Current status for demonstration
-    phoneNumber: '+919876543210',
-    deliveryDate: null, // Will be set if delivered
-    shippingPartner: null, // Will be set if dispatched
-    shippingPartnerName: 'FastShip Logistics', // Added for display
-    shippingPartnerContact: 'contact@fastship.com', // Added as an 'article' equivalent for shipping partner
-    trackingId: null, // Will be set if dispatched
-    paidAt: new Date('2025-08-01T10:30:00Z'),
-    comments: [
-        {
-            user: '65f6d7a8b9c0d1e2f3a4b5cc', // Mock User ID
-            commentUserName: 'Admin User', // Added for display
-            comment: 'Customer requested expedited delivery.',
-        },
-        {
-            user: '65f6d7a8b9c0d1e2f3a4b5cd', // Mock User ID
-            commentUserName: 'Warehouse Manager', // Added for display
-            comment: 'Packaging team confirmed item availability.',
-        },
-    ],
-    createdAt: new Date('2025-08-01T09:00:00Z'),
-    updatedAt: new Date('2025-08-01T11:45:00Z'),
+    confirmed: {
+        label: 'Confirmed',
+        color: 'bg-blue-500/20 text-blue-600',
+        icon: CheckCircle,
+        bgColor: 'bg-blue-500'
+    },
+    packed: {
+        label: 'Packed',
+        color: 'bg-purple-500/20 text-purple-600',
+        icon: Package,
+        bgColor: 'bg-purple-500'
+    },
+    dispatched: {
+        label: 'Dispatched',
+        color: 'bg-indigo-500/20 text-indigo-600',
+        icon: RefreshCw,
+        bgColor: 'bg-indigo-500'
+    },
+    outfordeliver: {
+        label: 'Out for Delivery',
+        color: 'bg-orange-500/20 text-orange-600',
+        icon: Truck,
+        bgColor: 'bg-orange-500'
+    },
+    delivered: {
+        label: 'Delivered',
+        color: 'bg-green-500/20 text-green-600',
+        icon: CheckCircle,
+        bgColor: 'bg-green-500'
+    },
+    cancelled: {
+        label: 'Cancelled',
+        color: 'bg-red-500/20 text-red-600',
+        icon: XCircle,
+        bgColor: 'bg-red-500'
+    },
+    return: {
+        label: 'Returned',
+        color: 'bg-gray-500/20 text-gray-600',
+        icon: RefreshCw,
+        bgColor: 'bg-gray-500'
+    },
 };
 
-const formatCurrency = (amount: number) => new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR'
-}).format(amount);
-
-const formatDate = (date: Date | string | null) => {
-    if (!date) return 'N/A';
-    const d = new Date(date);
-    return d.toLocaleString('en-IN', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
-};
-
-function OrderStatusTracker({ status }: { status: string }) {
-    const statuses = [
-        'pending',
-        'confirmed',
-        'packed',
-        'dispatched',
-        'outfordeliver',
-        'delivered',
-        'cancelled',
-        'return',
-    ];
-    const currentIndex = statuses.indexOf(status);
-    const mainFlow = statuses.slice(0, 6);
-    const progress = ((mainFlow.indexOf(status) + 1) / mainFlow.length) * 100;
-
-    return (
-        <Card className="mb-6 w-full shadow-md">
-            <CardHeader>
-                <CardTitle>Order Status</CardTitle>
-                <p className="text-sm text-muted-foreground">Track the current status of the order</p>
-            </CardHeader>
-            <CardContent>
-                <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium capitalize">{status.replace(/outfordeliver/, 'out for delivery')}</span>
-                    <span className="text-sm font-medium">{Math.round(progress)}%</span>
-                </div>
-                <Progress value={progress} className="h-3 rounded-full" />
-                <div className="flex justify-between text-xs text-muted-foreground mt-3">
-                    {mainFlow.map((s, i) => (
-                        <span
-                            key={s}
-                            className={cn(
-                                'capitalize transition-colors duration-300',
-                                i <= currentIndex ? 'text-black font-semibold' : ''
-                            )}
-                        >
-                            {s.replace(/outfordeliver/, 'out for delivery')}
-                        </span>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
-    );
+interface OrderDetailsPageProps {
+    orderId: string;
 }
 
+export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
+    console.log("🪵 ~ OrderDetailsPage ~ orderIds:", orderIds)
+    const orderId = window.location.pathname.split("/").pop()
+    const router = useRouter();
+    const [isEditing, setIsEditing] = useState(false);
+    const [editingComment, setEditingComment] = useState('');
+    const {
+        data: order,
+        isLoading,
+        error,
+        refetch
+    } = useOrder(orderId);
+    console.log("🪵 ~ OrderDetailsPage ~ order:", order)
+    console.log("🪵 ~ OrderDetailsPage ~ error:", error)
 
-export default function OrderDetailsPage() {
-    const [order, setOrder] = useState<typeof mockOrderData | null>(null);
+    const updateOrderStatusMutation = useUpdateOrderStatus();
 
-    useEffect(() => {
-        setOrder(mockOrderData);
-    }, []);
+    // Helper functions
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'INR'
+        }).format(amount);
+    };
 
-    if (!order) {
-        return <div className="p-10"><Skeleton className="w-full h-96" /></div>;
+    const formatDate = (date: string | Date | null) => {
+        if (!date) return 'N/A';
+        const d = new Date(date);
+        return d.toLocaleString('en-IN', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    };
+
+    const calculateOrderTotal = () => {
+        if (!order?.productDetails) return 0;
+        return order.productDetails.reduce((total, item) => {
+            const discountedPrice = item.amount * (1 - item.discountPercent / 100);
+            return total + (discountedPrice * item.quatity);
+        }, 0);
+    };
+
+    const getStatusInfo = (status: string) => {
+        return ORDER_STATUS_CONFIG[status as keyof typeof ORDER_STATUS_CONFIG] || ORDER_STATUS_CONFIG.pending;
+    };
+
+    const handleStatusUpdate = async (newStatus: string) => {
+        if (!order) return;
+
+        try {
+            await updateOrderStatusMutation.mutateAsync({
+                id: order._id,
+                status: newStatus,
+                comment: `Status updated to ${getStatusInfo(newStatus).label}`,
+            });
+            refetch();
+        } catch (error) {
+            console.error('Failed to update order status:', error);
+        }
+    };
+
+    const handleAddComment = async () => {
+        if (!order || !editingComment.trim()) return;
+
+        try {
+            await updateOrderStatusMutation.mutateAsync({
+                id: order._id,
+                status: order.status,
+                comment: editingComment,
+            });
+            setEditingComment('');
+            setIsEditing(false);
+            refetch();
+        } catch (error) {
+            console.error('Failed to add comment:', error);
+        }
+    };
+
+    const OrderStatusTracker = ({ status }: { status: string }) => {
+        const statuses = ['pending', 'confirmed', 'packed', 'dispatched', 'outfordeliver', 'delivered'];
+        const currentIndex = statuses.indexOf(status);
+        const progress = status === 'cancelled' || status === 'return'
+            ? 0
+            : ((currentIndex + 1) / statuses.length) * 100;
+
+        return (
+            <Card className="mb-6">
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle className="flex items-center gap-2">
+                                Order Status
+                                <Badge className={getStatusInfo(status).color}>
+                                    {React.createElement(getStatusInfo(status).icon, { className: "h-3 w-3" })}
+                                    {getStatusInfo(status).label}
+                                </Badge>
+                            </CardTitle>
+                            <CardDescription>Track the current status of the order</CardDescription>
+                        </div>
+                        <div className="flex gap-2">
+                            {/* Status Update Buttons */}
+                            {Object.entries(ORDER_STATUS_CONFIG)
+                                .filter(([key]) => key !== status)
+                                .slice(0, 3)
+                                .map(([key, config]) => (
+                                    <Button
+                                        key={key}
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleStatusUpdate(key)}
+                                        disabled={updateOrderStatusMutation.isPending}
+                                        className="text-xs"
+                                    >
+                                        {React.createElement(config.icon, { className: "h-3 w-3 mr-1" })}
+                                        {config.label}
+                                    </Button>
+                                ))}
+                        </div>
+                    </div>
+                </CardHeader>
+                {status !== 'cancelled' && status !== 'return' && (
+                    <CardContent>
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium">Progress</span>
+                            <span className="text-sm font-medium">{Math.round(progress)}%</span>
+                        </div>
+                        <Progress value={progress} className="h-3 rounded-full" />
+                        <div className="flex justify-between text-xs text-muted-foreground mt-3">
+                            {statuses.map((s, i) => (
+                                <span
+                                    key={s}
+                                    className={cn(
+                                        'capitalize transition-colors duration-300',
+                                        i <= currentIndex ? 'text-foreground font-semibold' : ''
+                                    )}
+                                >
+                                    {s.replace('outfordeliver', 'out for delivery')}
+                                </span>
+                            ))}
+                        </div>
+                    </CardContent>
+                )}
+            </Card>
+        );
+    };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-background">
+                <div className="max-w-6xl mx-auto p-6 space-y-6">
+                    <Skeleton className="h-8 w-64" />
+                    <Skeleton className="h-64 w-full" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Skeleton className="h-48 w-full" />
+                        <Skeleton className="h-48 w-full" />
+                    </div>
+                </div>
+            </div>
+        );
     }
 
-    const totalAmount = order.productDetails.reduce((acc, item) => {
-        const discounted = item.amount * (1 - item.discountPercent / 100);
-        return acc + item.quatity * discounted;
-    }, 0);
+    if (error || !order) {
+        return (
+            <div className="min-h-screen bg-background">
+                <div className="max-w-6xl mx-auto p-6">
+                    <div className="text-center py-12">
+                        <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                        <p className="text-red-500 mb-4">Failed to load order details</p>
+                        <div className="flex gap-4 justify-center">
+                            <Button onClick={() => refetch()}>Try Again</Button>
+                            <Button variant="outline" onClick={() => router.back()}>
+                                Go Back
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    const totalAmount = calculateOrderTotal();
 
     return (
-        <div className="max-w-6xl mx-auto p-6 space-y-8">
-            <h1 className="text-4xl font-bold text-center text-gray-900 mb-4">Order #{order.orderNumber}</h1>
-
-            <OrderStatusTracker status={order.status} />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Order Summary</CardTitle>
-                        <CardDescription>Details of the customer and payment</CardDescription>
-                    </CardHeader>
-                    <CardContent className="text-sm space-y-2">
-                        <p><strong>Customer:</strong> {order.userName} ({order.userEmail})</p>
-                        <p><strong>Phone:</strong> {order.phoneNumber}</p>
-                        <p><strong>Order Mode:</strong> {order.mode}</p>
-                        <p><strong>Payment Mode:</strong> {order.paymentMode}</p>
-                        <p><strong>Total:</strong> {formatCurrency(totalAmount)}</p>
-                        <p><strong>Ordered At:</strong> {formatDate(order.createdAt)}</p>
-                        <p><strong>Paid At:</strong> {formatDate(order.paidAt)}</p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Shipping Info</CardTitle>
-                        <CardDescription>Delivery details and partner</CardDescription>
-                    </CardHeader>
-                    <CardContent className="text-sm space-y-2">
-                        <p><strong>Address:</strong> {order.addressDetails.name}</p>
-                        <p className="text-muted-foreground text-xs">{order.addressDetails.fullAddress}</p>
-                        <p><strong>Status:</strong> <Badge variant={order.status === 'cancelled' ? 'destructive' : 'default'}>{order.status}</Badge></p>
-                        <p><strong>Shipping Partner:</strong> {order.shippingPartnerName || 'N/A'}</p>
-                        <p><strong>Tracking ID:</strong> {order.trackingId || 'N/A'}</p>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <Separator />
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Products</CardTitle>
-                </CardHeader>
-                <CardContent className="overflow-x-auto">
-                    <ScrollArea className="w-full">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead>Qty</TableHead>
-                                    <TableHead>Color</TableHead>
-                                    <TableHead>Unit Price</TableHead>
-                                    <TableHead>Discount</TableHead>
-                                    <TableHead>Total</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {order.productDetails.map((p, idx) => {
-                                    const discounted = p.amount * (1 - p.discountPercent / 100);
-                                    const total = p.quatity * discounted;
-                                    return (
-                                        <TableRow key={idx}>
-                                            <TableCell>{p.productName}</TableCell>
-                                            <TableCell className="text-xs text-muted-foreground max-w-sm truncate">{p.productArticle}</TableCell>
-                                            <TableCell>{p.quatity}</TableCell>
-                                            <TableCell>{p.color}</TableCell>
-                                            <TableCell>{formatCurrency(p.amount)}</TableCell>
-                                            <TableCell>{p.discountPercent}%</TableCell>
-                                            <TableCell className="font-semibold">{formatCurrency(total)}</TableCell>
-                                        </TableRow>
-                                    );
-                                })}
-                            </TableBody>
-                        </Table>
-                    </ScrollArea>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Comments</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 text-sm">
-                    {order.comments.length > 0 ? order.comments.map((c, idx) => (
-                        <div key={idx} className="p-3 bg-muted/20 rounded-md border border-muted">
-                            <p className="font-medium text-foreground">{c.commentUserName}:</p>
-                            <p>{c.comment}</p>
+        <div className="min-h-screen bg-background">
+            <div className="max-w-6xl mx-auto p-6 space-y-8">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => router.back()}
+                        >
+                            <ArrowLeft className="h-4 w-4 mr-2" />
+                            Back to Orders
+                        </Button>
+                        <div>
+                            <h1 className="text-3xl font-bold">Order #{order.orderNumber}</h1>
+                            <p className="text-muted-foreground">
+                                Placed on {formatDate(order.createdAt)}
+                            </p>
                         </div>
-                    )) : <p className="text-muted-foreground">No comments</p>}
-                </CardContent>
-            </Card>
+                    </div>
+                    <Button onClick={() => refetch()} variant="outline" size="sm">
+                        <RefreshCw className="h-4 w-4" />
+                    </Button>
+                </div>
+
+                {/* Status Tracker */}
+                <OrderStatusTracker status={order.status} />
+
+                {/* Order Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Customer Information */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <User className="h-5 w-5" />
+                                Customer Information
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
+                                    <User className="h-5 w-5 text-primary" />
+                                </div>
+                                <div>
+                                    <p className="font-medium">{order.name}</p>
+                                    <p className="text-sm text-muted-foreground">Customer</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <Phone className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm">{order.phoneNumber}</span>
+                            </div>
+
+                            <div className="flex items-start gap-3">
+                                <MapPin className="h-4 w-4 text-muted-foreground mt-1" />
+                                <div>
+                                    <p className="text-sm font-medium">Delivery Address</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        {typeof order.address === 'string' ? order.address : 'Address not available'}
+                                    </p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Order Information */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Package className="h-5 w-5" />
+                                Order Information
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Order Mode</p>
+                                    <Badge variant="secondary" className="mt-1">
+                                        {order.mode}
+                                    </Badge>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Payment Method</p>
+                                    <Badge variant="secondary" className="mt-1">
+                                        {order.paymentMode}
+                                    </Badge>
+                                </div>
+                            </div>
+
+                            <div>
+                                <p className="text-sm text-muted-foreground">Total Amount</p>
+                                <p className="text-2xl font-bold text-primary">{formatCurrency(totalAmount)}</p>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <Calendar className="h-4 w-4 text-muted-foreground" />
+                                <div>
+                                    <p className="text-sm font-medium">Order Date</p>
+                                    <p className="text-sm text-muted-foreground">{formatDate(order.createdAt)}</p>
+                                </div>
+                            </div>
+
+                            {order.deliveryDate && (
+                                <div className="flex items-center gap-3">
+                                    <Truck className="h-4 w-4 text-muted-foreground" />
+                                    <div>
+                                        <p className="text-sm font-medium">Delivery Date</p>
+                                        <p className="text-sm text-muted-foreground">{formatDate(order.deliveryDate)}</p>
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <Separator />
+
+                {/* Products Table */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Order Items ({order.productDetails.length} items)</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="overflow-x-auto">
+                            <table className="w-full caption-bottom text-sm">
+                                <thead className="[&_tr]:border-b">
+                                    <tr className="border-b transition-colors hover:bg-muted/50">
+                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Product</th>
+                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Color</th>
+                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Quantity</th>
+                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Unit Price</th>
+                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Discount</th>
+                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="[&_tr:last-child]:border-0">
+                                    {order.productDetails.map((item, index) => {
+                                        const discountedPrice = item.amount * (1 - item.discountPercent / 100);
+                                        const itemTotal = discountedPrice * item.quatity;
+
+                                        return (
+                                            <tr key={index} className="border-b transition-colors hover:bg-muted/50">
+                                                <td className="p-4 align-middle">
+                                                    <div className="flex items-center gap-3">
+                                                        {item.productId?.image && (
+                                                            <img
+                                                                src={item.productId.image}
+                                                                alt={item.productId.name || 'Product'}
+                                                                className="h-12 w-12 rounded-md object-cover"
+                                                            />
+                                                        )}
+                                                        <div>
+                                                            <p className="font-medium">
+                                                                {item.productId?.name || 'Unknown Product'}
+                                                            </p>
+                                                            <p className="text-sm text-muted-foreground">
+                                                                {item.productId?.description || ''}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4 align-middle">
+                                                    <Badge variant="outline">{item.color}</Badge>
+                                                </td>
+                                                <td className="p-4 align-middle">
+                                                    <Badge variant="secondary">{item.quatity}</Badge>
+                                                </td>
+                                                <td className="p-4 align-middle">
+                                                    <div>
+                                                        <p className="font-medium">{formatCurrency(item.amount)}</p>
+                                                        {item.discountPercent > 0 && (
+                                                            <p className="text-sm text-green-600">
+                                                                After discount: {formatCurrency(discountedPrice)}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="p-4 align-middle">
+                                                    {item.discountPercent > 0 ? (
+                                                        <Badge variant="destructive" className="bg-green-500/20 text-green-600">
+                                                            {item.discountPercent}% OFF
+                                                        </Badge>
+                                                    ) : (
+                                                        <span className="text-muted-foreground">No discount</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-4 align-middle">
+                                                    <p className="font-semibold">{formatCurrency(itemTotal)}</p>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Order Summary */}
+                        <div className="mt-6 pt-6 border-t">
+                            <div className="flex justify-end">
+                                <div className="w-full max-w-md space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                        <span>Subtotal:</span>
+                                        <span>{formatCurrency(totalAmount)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span>Tax:</span>
+                                        <span>Included</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span>Shipping:</span>
+                                        <span>Free</span>
+                                    </div>
+                                    <Separator />
+                                    <div className="flex justify-between text-lg font-semibold">
+                                        <span>Total:</span>
+                                        <span>{formatCurrency(totalAmount)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Shipping Information */}
+                {(order.shippingPartner || order.trackingId) && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Truck className="h-5 w-5" />
+                                Shipping Information
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {order.shippingPartner && (
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Shipping Partner</p>
+                                    <p className="font-medium">{order.shippingPartner}</p>
+                                </div>
+                            )}
+                            {order.trackingId && (
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Tracking ID</p>
+                                    <div className="flex items-center gap-2">
+                                        <code className="bg-muted px-2 py-1 rounded text-sm font-mono">
+                                            {order.trackingId}
+                                        </code>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => navigator.clipboard.writeText(order.trackingId || '')}
+                                        >
+                                            Copy
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Comments Section */}
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center gap-2">
+                                <MessageSquare className="h-5 w-5" />
+                                Comments ({order.comments?.length || 0})
+                            </CardTitle>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setIsEditing(!isEditing)}
+                            >
+                                {isEditing ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
+                                {isEditing ? 'Cancel' : 'Add Comment'}
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {/* Add Comment Form */}
+                        {isEditing && (
+                            <div className="p-4 bg-muted/20 rounded-lg border border-dashed">
+                                <div className="space-y-3">
+                                    <Textarea
+                                        placeholder="Add a comment about this order..."
+                                        value={editingComment}
+                                        onChange={(e) => setEditingComment(e.target.value)}
+                                        className="min-h-[100px] resize-none"
+                                    />
+                                    <div className="flex gap-2">
+                                        <Button
+                                            size="sm"
+                                            onClick={handleAddComment}
+                                            disabled={!editingComment.trim() || updateOrderStatusMutation.isPending}
+                                        >
+                                            {updateOrderStatusMutation.isPending ? (
+                                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                            ) : (
+                                                <Save className="h-4 w-4 mr-2" />
+                                            )}
+                                            Save Comment
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setEditingComment('');
+                                                setIsEditing(false);
+                                            }}
+                                        >
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Existing Comments */}
+                        {order.comments && order.comments.length > 0 ? (
+                            <div className="space-y-4">
+                                {order.comments.map((comment, index) => (
+                                    <div key={index} className="p-4 bg-muted/10 rounded-lg border">
+                                        <div className="flex items-start justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
+                                                    <User className="h-4 w-4 text-primary" />
+                                                </div>
+                                                <div>
+                                                    <p className="font-medium text-sm">
+                                                        {typeof comment.user === 'string' ? comment.user : comment.user?.name || 'System'}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {formatDate(new Date())}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-foreground ml-10">
+                                            {comment.comment}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-8 text-muted-foreground">
+                                <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                <p>No comments yet</p>
+                                <p className="text-sm">Add a comment to track order progress</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Action Buttons */}
+                <div className="flex gap-4 justify-center">
+                    <Button variant="outline" onClick={() => router.back()}>
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Back to Orders
+                    </Button>
+                    <Button onClick={() => window.print()} variant="outline">
+                        Print Order
+                    </Button>
+                    {order.status !== 'delivered' && order.status !== 'cancelled' && (
+                        <Button
+                            onClick={() => {
+                                const nextStatus = order.status === 'pending' ? 'confirmed' :
+                                    order.status === 'confirmed' ? 'packed' :
+                                        order.status === 'packed' ? 'dispatched' :
+                                            order.status === 'dispatched' ? 'outfordeliver' :
+                                                order.status === 'outfordeliver' ? 'delivered' : order.status;
+                                if (nextStatus !== order.status) {
+                                    handleStatusUpdate(nextStatus);
+                                }
+                            }}
+                            disabled={updateOrderStatusMutation.isPending}
+                        >
+                            {updateOrderStatusMutation.isPending ? (
+                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                            )}
+                            Advance Status
+                        </Button>
+                    )}
+                </div>
+            </div>
         </div>
     );
-};
-
+}
