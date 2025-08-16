@@ -350,8 +350,8 @@ const { data: bill, isLoading: billLoading, refetch: refetchBill } = useCurrentB
         <BillDrawer
           isOpen={isBillOpen}
           onClose={() => setIsBillOpen(false)}
-          onPrintBill={handlePrintBillWithCustomer}
-          onAddToOrder={handleAddToOrder}
+          // onPrintBill={handlePrintBillWithCustomer}
+          // onAddToOrder={handleAddToOrder}
         />
       )}
     </div>

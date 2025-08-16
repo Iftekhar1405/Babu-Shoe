@@ -18,6 +18,8 @@ import {
   ProductDetail,
   CreateOrderFromBillDto,
   OrderResponse,
+  OrderFilters,
+  PaginatedOrderResponse,
 } from "@/types";
 
 interface CreateBillDto {
@@ -64,6 +66,9 @@ export const queryKeys = {
   // Orders
   orders: () => [...queryKeys.all, "orders"] as const,
   order: (id: string) => [...queryKeys.orders(), id] as const,
+  ordersList: (filters?: OrderFilters) =>
+    [...queryKeys.orders(), "list", filters] as const,
+  ordersStats: () => [...queryKeys.orders(), "stats"] as const,
 
   //company
   companies: () => [...queryKeys.all, "companies"] as const,
@@ -205,8 +210,9 @@ class ApiClient {
     if (filters?.page) params.append("page", filters.page.toString());
     if (filters?.limit) params.append("limit", filters.limit.toString());
 
-    const endpoint = `/products${params.toString() ? `?${params.toString()}` : ""
-      }`;
+    const endpoint = `/products${
+      params.toString() ? `?${params.toString()}` : ""
+    }`;
     const response = await this.request<Product<true>[]>(endpoint);
     return response.data;
   }
@@ -220,8 +226,9 @@ class ApiClient {
     if (filters?.page) params.append("page", filters.page.toString());
     if (filters?.limit) params.append("limit", filters.limit.toString());
 
-    const endpoint = `/products/paginated${params.toString() ? `?${params.toString()}` : ""
-      }`;
+    const endpoint = `/products/paginated${
+      params.toString() ? `?${params.toString()}` : ""
+    }`;
     const response = await this.request<PaginatedResponse<Product<true>>>(
       endpoint
     );
@@ -309,14 +316,72 @@ class ApiClient {
   }
 
   // Orders
-  async createOrderFromBill(orderData: CreateOrderFromBillDto): Promise<OrderResponse> {
-  const response = await this.request<OrderResponse>("/orders", {
-    method: "POST",
-    body: JSON.stringify(orderData),
-  });
-  console.log("🪵 ~ ApiClient ~ createOrderFromBill ~ response:", response)
-  return response;
-}
+  async createOrderFromBill(
+    orderData: CreateOrderFromBillDto
+  ): Promise<OrderResponse> {
+    const response = await this.request<OrderResponse>("/orders", {
+      method: "POST",
+      body: JSON.stringify(orderData),
+    });
+    console.log("🪵 ~ ApiClient ~ createOrderFromBill ~ response:", response);
+    return response;
+  }
+
+  async getOrdersPaginated(
+    filters?: OrderFilters
+  ): Promise<PaginatedOrderResponse> {
+    const params = new URLSearchParams();
+    if (filters?.search) params.append("search", filters.search);
+    if (filters?.status) params.append("status", filters.status);
+    if (filters?.mode) params.append("mode", filters.mode);
+    if (filters?.paymentMode) params.append("paymentMode", filters.paymentMode);
+    if (filters?.page) params.append("page", filters.page.toString());
+    if (filters?.limit) params.append("limit", filters.limit.toString());
+    if (filters?.startDate) params.append("startDate", filters.startDate);
+    if (filters?.endDate) params.append("endDate", filters.endDate);
+
+    const endpoint = `/orders/paginated${
+      params.toString() ? `?${params.toString()}` : ""
+    }`;
+    const response = await this.request<PaginatedOrderResponse>(endpoint);
+    return response;
+  }
+
+  async getOrdersStats(): Promise<{
+    totalOrders: number;
+    pendingOrders: number;
+    completedOrders: number;
+    cancelledOrders: number;
+    totalRevenue: number;
+  }> {
+    const response = await this.request<{
+      totalOrders: number;
+      pendingOrders: number;
+      completedOrders: number;
+      cancelledOrders: number;
+      totalRevenue: number;
+    }>("/orders/stats");
+    return response.data;
+  }
+
+  async updateOrderStatus(
+    id: string,
+    status: string,
+    comment?: string
+  ): Promise<Order<true>> {
+    const response = await this.request<Order<true>>(`/orders/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status, comment }),
+    });
+    return response.data;
+  }
+
+  async searchOrders(query: string): Promise<Order<true>[]> {
+    const response = await this.request<Order<true>[]>(
+      `/orders/search?q=${encodeURIComponent(query)}`
+    );
+    return response.data;
+  }
 
   async getOrders(): Promise<Order<true>[]> {
     const response = await this.request<Order<true>[]>("/orders");
@@ -324,8 +389,9 @@ class ApiClient {
   }
 
   async getOrderById(id: string): Promise<Order<true>> {
+    console.log("🪵 ~ ApiClient ~ getOrderById ~ id:", id)
     const response = await this.request<Order<true>>(`/orders/${id}`);
-    return response.data;
+    return response;
   }
 
   async createOrder(
@@ -562,7 +628,7 @@ export const useOrders = <TData = Order<true>[]>(
 };
 
 export const useOrder = <TData = Order<true>>(
-  id: string,
+  id: string | undefined,
   options?: Omit<
     UseQueryOptions<Order<true>, ApiError, TData>,
     "queryKey" | "queryFn"
@@ -578,6 +644,56 @@ export const useOrder = <TData = Order<true>>(
   });
 };
 
+export const useOrdersPaginated = <TData = PaginatedOrderResponse>(
+  filters?: OrderFilters,
+  options?: Omit<
+    UseQueryOptions<PaginatedOrderResponse, ApiError, TData>,
+    "queryKey" | "queryFn"
+  >
+) => {
+  return useQuery({
+    queryKey: queryKeys.ordersList(filters),
+    queryFn: () => apiClient.getOrdersPaginated(filters),
+    staleTime: 30 * 1000, // 30 seconds
+    gcTime: 2 * 60 * 1000, // 2 minutes
+    ...options,
+  });
+};
+
+export const useOrdersStats = <
+  TData = {
+    totalOrders: number;
+    pendingOrders: number;
+    completedOrders: number;
+    cancelledOrders: number;
+    totalRevenue: number;
+  }
+>(
+  options?: Omit<
+    UseQueryOptions<
+      {
+        totalOrders: number;
+        pendingOrders: number;
+        completedOrders: number;
+        cancelledOrders: number;
+        totalRevenue: number;
+      },
+      ApiError,
+      TData
+    >,
+    "queryKey" | "queryFn"
+  >
+) => {
+  return useQuery({
+    queryKey: queryKeys.ordersStats(),
+    queryFn: () => apiClient.getOrdersStats(),
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    ...options,
+  });
+};
+
+// Bill/Cart
 export const useCurrentBill = <TData = Bill | null>(
   options?: Omit<
     UseQueryOptions<Bill | null, ApiError, TData>,
@@ -774,15 +890,16 @@ export const useCreateOrderFromBill = (
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (orderData: CreateOrderFromBillDto) => apiClient.createOrderFromBill(orderData),
+    mutationFn: (orderData: CreateOrderFromBillDto) =>
+      apiClient.createOrderFromBill(orderData),
     onSuccess: (newOrder) => {
-      console.log("🪵 ~ useCreateOrderFromBill ~ newOrder:", newOrder)
+      console.log("🪵 ~ useCreateOrderFromBill ~ newOrder:", newOrder);
       // Invalidate orders list to refresh data
       queryClient.invalidateQueries({ queryKey: queryKeys.orders() });
-      
+
       // Set the new order in cache
       queryClient.setQueryData(queryKeys.order(newOrder._id), newOrder);
-      
+
       // Clear the current bill after successful order creation
       queryClient.setQueryData(queryKeys.currentCart(), null);
       queryClient.invalidateQueries({ queryKey: queryKeys.currentCart() });
@@ -793,6 +910,37 @@ export const useCreateOrderFromBill = (
     ...options,
   });
 };
+
+export const useUpdateOrderStatus = (
+  options?: UseMutationOptions<
+    Order<true>,
+    ApiError,
+    { id: string; status: string; comment?: string }
+  >
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, status, comment }) =>
+      apiClient.updateOrderStatus(id, status, comment),
+    onSuccess: (updatedOrder) => {
+      // Update the specific order
+      queryClient.setQueryData(
+        queryKeys.order(updatedOrder._id || ""),
+        updatedOrder
+      );
+
+      // Invalidate orders lists to refresh data
+      queryClient.invalidateQueries({ queryKey: queryKeys.orders() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.ordersStats() });
+    },
+    onError: (error) => {
+      console.error("Failed to update order status:", error);
+    },
+    ...options,
+  });
+};
+
 export const useCreateOrder = (
   options?: UseMutationOptions<
     Order<true>,
@@ -885,7 +1033,12 @@ export const useUpdateBillItemMutation = (
   options?: UseMutationOptions<
     Bill,
     ApiError,
-    { productId: string; color?: string; quantity?: number; discountPercent?: number }
+    {
+      productId: string;
+      color?: string;
+      quantity?: number;
+      discountPercent?: number;
+    }
   >
 ) => {
   const queryClient = useQueryClient();
@@ -924,7 +1077,6 @@ export const useRemoveBillItemMutation = (
     ...options,
   });
 };
-
 
 export const useClearBill = (
   options?: UseMutationOptions<Bill, ApiError, void>

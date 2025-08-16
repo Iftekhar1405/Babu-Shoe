@@ -260,8 +260,8 @@ function DashboardContent() {
         <BillDrawer
           isOpen={isBillOpen}
           onClose={() => setIsBillOpen(false)}
-          onPrintBill={handlePrintBillWithCustomer}
-          onAddToOrder={handleAddToOrder}
+          // onPrintBill={handlePrintBillWithCustomer}
+          // onAddToOrder={handleAddToOrder}
         />
       )}
     </>

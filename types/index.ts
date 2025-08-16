@@ -84,7 +84,7 @@ export interface Order<e extends boolean = true> {
   orderNumber: number;
   customerName: string;
   customerId?: e extends true ? { name: string; _id: string } : string; // optional populated customer structure
-  items: ProductDetail<e>[];
+  productDetails: ProductDetail<e>[];
   totalAmount: number;
   status: ORDER_STATUS;
   progress: number;
@@ -179,4 +179,28 @@ export interface HeaderProps {
   onOpenBill?: () => void;
   showSearch?: boolean;
   onMenuToggle?: () => void;
+}
+
+
+// Orders interface and type
+
+export interface OrderFilters {
+  search?: string;
+  status?: string;
+  mode?: string;
+  paymentMode?: string;
+  page?: number;
+  limit?: number;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface PaginatedOrderResponse {
+  data: Order<true>[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
