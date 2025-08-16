@@ -15,15 +15,15 @@ import { CustomerInfo } from '@/types';
 function DashboardContent() {
   const [isBillOpen, setIsBillOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const { isAuthenticated } = useAuth();
-  
+
   const { data: categories, isLoading: categoryLoading } = useCategories();
   const { data: products, isLoading: productsLoading } = useProducts({ search: searchQuery });
-  
+
   const { data: bill } = useCurrentBill({
     enabled: isAuthenticated,
-    refetchInterval: 30000, 
+    refetchInterval: 30000,
   });
 
   const handleSearch = async (query: string) => {
@@ -173,7 +173,7 @@ function DashboardContent() {
                   </p>
                 )}
               </div>
-              
+
               {categories?.length === 0 ? (
                 <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-lg">
                   <Grid3X3 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
@@ -199,7 +199,7 @@ function DashboardContent() {
                   </p>
                 )}
               </div>
-              
+
               {products?.length === 0 ? (
                 <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-lg">
                   <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
@@ -260,8 +260,8 @@ function DashboardContent() {
         <BillDrawer
           isOpen={isBillOpen}
           onClose={() => setIsBillOpen(false)}
-          // onPrintBill={handlePrintBillWithCustomer}
-          // onAddToOrder={handleAddToOrder}
+        // onPrintBill={handlePrintBillWithCustomer}
+        // onAddToOrder={handleAddToOrder}
         />
       )}
     </>
