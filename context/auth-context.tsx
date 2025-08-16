@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // localStorage.removeItem('token');
   };
 
-  // Optional: Set up global error handling for 401s
+
   useEffect(() => {
     const handleUnauthorized = () => {
       if (!isLoading && isError) {
