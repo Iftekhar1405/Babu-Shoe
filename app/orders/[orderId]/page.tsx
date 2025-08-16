@@ -169,11 +169,8 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
     const calculateOrderTotal = () => {
         if (!order?.productDetails) return 0;
         return order.productDetails.reduce((total, item) => {
-            console.log({ item })
             if (!item.amount) return total + 0
             const discountedPrice = item.amount * (1 - item.discountPercent / 100);
-            console.log({ discountedPrice })
-            console.log({ total: +total })
             return total + ((discountedPrice ?? 0) * item.quantity);
         }, 0);
     };
@@ -309,7 +306,6 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
             ? 0
             : ((currentIndex + 1) / statuses.length) * 100;
 
-        console.log({ progress, currentIndex, statuses, status })
 
         return (
             <Card className="mb-6">
@@ -510,7 +506,6 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
     }
 
     const totalAmount = calculateOrderTotal();
-    console.log({ totalAmount })
 
     return (
         <div className="min-h-screen bg-background">
