@@ -243,11 +243,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
             refetch();
 
             toast.success("Status Updated", {
-                description: `Changed to ${getStatusInfo(newStatus).label}`,
-                action: {
-                    label: "Undo",
-                    onClick: () => executeUndo(undoAction),
-                },
+                description: `Changed to ${getStatusInfo(newStatus).label}`
             });
         } catch (error) {
             console.error('Failed to update order status:', error);
@@ -282,7 +278,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
             setIsEditing(false);
             refetch();
 
-            toast.success("Comment added", {
+            toast("Comment added", {
                 action: {
                     label: "Undo",
                     onClick: () => executeUndo(undoAction),
@@ -374,10 +370,10 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
 
         return (
             <div className="fixed bottom-4 right-4 z-50">
-                <Card className="w-80 shadow-lg border-l-4 border-l-amber-500">
+                <Card className="w-80 shadow-lg border-l-4 border-l-stone-500">
                     <CardContent className="p-4">
                         <div className="flex items-start gap-3">
-                            <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                            <AlertTriangle className="h-5 w-5 text-stone-900 flex-shrink-0 mt-0.5" />
                             <div className="flex-1">
                                 <p className="font-medium text-sm mb-1">Action Completed</p>
                                 <p className="text-sm text-muted-foreground mb-3">
@@ -405,8 +401,8 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                                             Dismiss
                                         </Button>
                                     </div>
-                                    <div className="text-xs text-muted-foreground">
-                                        Auto-dismiss in {undoTimeRemaining}s
+                                    <div className="text-center p-2 flex justify-center items-center text-xs rounded-full text-stone-100 h-full bg-stone-900">
+                                        <span className=''> {undoTimeRemaining}s</span>
                                     </div>
                                 </div>
                                 <div className="mt-2">
@@ -644,7 +640,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                                     </tr>
                                 </thead>
                                 <tbody className="[&_tr:last-child]:border-0">
-                                    {order.productDetails.map((item, index) => {
+                                    {order.productDetails?.map((item, index) => {
                                         const discountedPrice = (item.amount ?? 0) * (1 - item.discountPercent / 100);
                                         const itemTotal = discountedPrice * item.quantity;
 

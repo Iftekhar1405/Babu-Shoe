@@ -256,7 +256,7 @@ export function ProductCard({ product, showAddToBill = true }: ProductCardProps)
                   <Badge
                     key={index}
                     variant="outline"
-                    className="text-xs px-2 py-1 text-blue-600 border-blue-200"
+                    className="text-xs px-2 py-1"
                   >
                     <Tag className="h-2 w-2 mr-1" />
                     {typeof tag === 'object' ? tag.name : tag}

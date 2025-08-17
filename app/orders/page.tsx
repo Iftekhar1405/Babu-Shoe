@@ -397,10 +397,6 @@ export default function OrdersPage() {
             <Download className="h-4 w-4" />
             Export
           </Button>
-          <Button className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-            <Plus className="h-4 w-4" />
-            New Order
-          </Button>
         </div>
       </div>
 
@@ -776,7 +772,7 @@ export default function OrdersPage() {
                         onClick={() => handleViewOrder(order._id || '')}
                       >
                         {visibleColumns.orderNumber && (
-                          <TableCell className="font-mono font-medium text-blue-600">
+                          <TableCell className="font-mono font-medium ">
                             #{order.orderNumber}
                           </TableCell>
                         )}
