@@ -628,7 +628,7 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                 {/* Products Table */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Order Items ({order.productDetails.length} items)</CardTitle>
+                        <CardTitle>Order Items ({order.productDetails?.length} items)</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="overflow-x-auto">
@@ -828,31 +828,33 @@ export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
                             </div>
                         )}
 
-                        {/* Existing Comments */}
+                        {/* Existing Comments - Scrollable Container */}
                         {order.comments && order.comments.length > 0 ? (
-                            <div className="space-y-4">
-                                {order.comments.map((comment, index) => (
-                                    <div key={index} className="p-4 bg-muted/10 rounded-lg border">
-                                        <div className="flex items-start justify-between mb-2">
-                                            <div className="flex items-center gap-2">
-                                                <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
-                                                    <User className="h-4 w-4 text-primary" />
-                                                </div>
-                                                <div>
-                                                    <p className="font-medium text-sm">
-                                                        {comment.user.name}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {formatDate(new Date())}
-                                                    </p>
+                            <div className="h-[300px] overflow-y-auto scrollbar-hide">
+                                <div className="space-y-4 pr-2">
+                                    {order.comments.map((comment, index) => (
+                                        <div key={index} className="p-4 bg-muted/10 rounded-lg border">
+                                            <div className="flex items-start justify-between mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
+                                                        <User className="h-4 w-4 text-primary" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-medium text-sm">
+                                                            {comment.user.name}
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {formatDate(new Date())}
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             </div>
+                                            <p className="text-sm text-foreground ml-10">
+                                                {comment.comment}
+                                            </p>
                                         </div>
-                                        <p className="text-sm text-foreground ml-10">
-                                            {comment.comment}
-                                        </p>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
                         ) : (
                             <div className="text-center py-8 text-muted-foreground">

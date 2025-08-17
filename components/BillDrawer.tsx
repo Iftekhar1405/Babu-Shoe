@@ -14,9 +14,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { 
-  useCurrentBill, 
-  useClearBill, 
+import {
+  useCurrentBill,
+  useClearBill,
   useOptimisticBillUpdates,
   useUpdateBillItemMutation,
   useRemoveBillItemMutation,
@@ -24,6 +24,8 @@ import {
 } from '@/lib/api-advance';
 import { useDebounce } from '@/hooks/use-debounce';
 import { handlePrintBillWithCustomerInfo } from './handlePrintBill';
+import { calculateTotal } from '@/lib/utils';
+import { handlePrintOrderSummaryFn } from './handlePrintOrderSummary';
 
 interface BillDrawerProps {
   isOpen: boolean;
@@ -36,7 +38,6 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
   const [orderSummaryOpen, setOrderSummaryOpen] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<OrderResponse | null>(null);
-  
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     customerName: '',
     phoneNumber: '',
@@ -44,7 +45,6 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
     paymentMode: ORDER_PAYMENT_MODE.Cash,
     address: '',
   });
-  
   const [discountInputs, setDiscountInputs] = useState<Record<string, number>>({});
   const debouncedDiscountInputs = useDebounce(discountInputs, 800);
 
@@ -73,13 +73,13 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
     if (items.length > 0) {
       const initialDiscounts: Record<string, number> = {};
       const initialQuantities: Record<string, number> = {};
-      
+
       items.forEach(item => {
         const key = `${item.productId._id}-${item.color || ''}`;
         initialDiscounts[key] = item.discountPercent;
         initialQuantities[key] = item.quantity;
       });
-      
+
       setDiscountInputs(initialDiscounts);
       setQuantityInputs(initialQuantities);
     }
@@ -90,7 +90,7 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
     const handleDebouncedDiscountUpdates = async () => {
       for (const [key, debouncedDiscount] of Object.entries(debouncedDiscountInputs)) {
         const [productId, color] = key.split('-');
-        const currentItem = items.find(item => 
+        const currentItem = items.find(item =>
           item.productId._id === productId && item.color === (color || '')
         );
 
@@ -157,7 +157,7 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
 
   const handleQuantityInputChange = useCallback((productId: string, color: string, newQuantity: number) => {
     if (newQuantity < 1) return;
-    
+
     const key = `${productId}-${color}`;
     setQuantityInputs(prev => ({
       ...prev,
@@ -167,7 +167,7 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
 
   const handleDiscountInputChange = useCallback((productId: string, color: string, discount: number) => {
     if (discount < 0 || discount > 100) return;
-    
+
     const key = `${productId}-${color}`;
     setDiscountInputs(prev => ({
       ...prev,
@@ -177,12 +177,12 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
 
   const handleQuantityButtonClick = useCallback((productId: string, color: string, increment: number) => {
     const key = `${productId}-${color}`;
-    const currentQuantity = quantityInputs[key] ?? 
+    const currentQuantity = quantityInputs[key] ??
       items.find(item => item.productId._id === productId && item.color === color)?.quantity ?? 1;
-    
+
     const newQuantity = currentQuantity + increment;
     if (newQuantity < 1) return;
-    
+
     setQuantityInputs(prev => ({
       ...prev,
       [key]: newQuantity
@@ -266,8 +266,9 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
         name: customerInfo.customerName,
         productDetails: items.map(item => ({
           productId: item.productId._id!,
-          quatity: item.quantity, // Note: keeping the typo to match backend
+          quantity: item.quantity,
           color: item.color || '',
+          size: item.size,
           amount: item.productId.price,
           discountPercent: item.discountPercent
         })),
@@ -278,14 +279,15 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
       };
 
       const createdOrder = await createOrderMutation.mutateAsync(orderData);
-      
+
       setCreatedOrder(createdOrder);
       setCustomerDialogOpen(false);
       setOrderSummaryOpen(true);
-      
+
       toast.success(`Order #${createdOrder.orderNumber} placed successfully!`);
-      
+
       // Clear bill and reset form
+      handleClearBill();
       resetCustomerInfo();
     } catch (error) {
       console.error('Failed to create order:', error);
@@ -295,10 +297,10 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
 
   const handlePrintBill = () => {
     if (!validateCustomerInfo(false)) return;
-    
+
     setCustomerDialogOpen(false);
     handlePrintBillWithCustomerInfo(items, customerInfo);
-    
+
     // Clear bill and reset form after printing
     handleClearBill();
     resetCustomerInfo();
@@ -312,10 +314,11 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
         const originalItem = items.find(item => item.productId._id === pd.productId);
         return {
           productId: originalItem?.productId!,
-          quantity: pd.quatity,
+          quantity: pd.quantity,
           color: pd.color,
+          size: pd.size,
           discountPercent: pd.discountPercent,
-          finalPrice: (pd.amount * pd.quatity) * (1 - pd.discountPercent / 100),
+          finalPrice: (pd.amount * pd.quantity) * (1 - pd.discountPercent / 100),
           salesPerson: pd.salesPerson
         };
       });
@@ -328,7 +331,7 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
         address: createdOrder.address
       };
 
-      handlePrintBillWithCustomerInfo(printItems, customerData);
+      handlePrintOrderSummaryFn(createdOrder);
     }
   };
 
@@ -448,7 +451,7 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
                                 -1
                               )}
                               disabled={
-                                (quantityInputs[`${item.productId._id}-${item.color || ''}`] ?? item.quantity) <= 1 || 
+                                (quantityInputs[`${item.productId._id}-${item.color || ''}`] ?? item.quantity) <= 1 ||
                                 isUpdatingItem
                               }
                             >
@@ -521,7 +524,7 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
                               )}
                             </div>
                             <div className="text-sm font-bold text-gray-900">
-                              Total: ₹{item.finalPrice.toFixed(2)}
+                              Total: ₹{calculateTotal(item).toFixed(2)}
                             </div>
                           </div>
                           <Button
@@ -788,9 +791,10 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
               <div className="space-y-2">
                 <h4 className="font-semibold text-gray-900">Order Items:</h4>
                 {createdOrder.productDetails.map((item, index) => {
+                  console.log("🪵 ~ item:", item)
                   const originalItem = items.find(billItem => billItem.productId._id === item.productId);
-                  const itemTotal = (item.amount * item.quatity) * (1 - item.discountPercent / 100);
-                  
+                  const itemTotal = (item.amount * item.quantity) * (1 - item.discountPercent / 100);
+
                   return (
                     <div key={index} className="flex justify-between items-center text-sm py-1">
                       <div className="flex-1">
@@ -798,7 +802,7 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
                           {originalItem?.productId.name || 'Product'} - {item.color}
                         </div>
                         <div className="text-xs text-gray-500">
-                          ₹{item.amount} × {item.quatity} 
+                          ₹{item.amount} × {item.quantity}
                           {item.discountPercent > 0 && ` (-${item.discountPercent}%)`}
                         </div>
                       </div>
@@ -808,12 +812,12 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
                     </div>
                   );
                 })}
-                
+
                 <Separator />
                 <div className="flex justify-between font-bold text-lg pt-2">
                   <span>Total Amount:</span>
                   <span>₹{createdOrder.productDetails.reduce((sum, item) => {
-                    return sum + (item.amount * item.quatity) * (1 - item.discountPercent / 100);
+                    return sum + (item.amount * item.quantity) * (1 - item.discountPercent / 100);
                   }, 0).toFixed(2)}</span>
                 </div>
               </div>

@@ -26,9 +26,8 @@ interface CreateBillDto {
   productId: string;
   quantity: number;
   color?: string;
-  amount?: number;
   discountPercent: number;
-  finalPrice: number;
+  size: string;
   salesPerson?: string;
 }
 
@@ -38,8 +37,8 @@ interface Bill {
   items: ProductDetail<true>[];
   totalAmount: number;
   billPrinted: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 import { authQueryKeys } from "./auth-hooks";
 
@@ -210,8 +209,9 @@ class ApiClient {
     if (filters?.page) params.append("page", filters.page.toString());
     if (filters?.limit) params.append("limit", filters.limit.toString());
 
-    const endpoint = `/products${params.toString() ? `?${params.toString()}` : ""
-      }`;
+    const endpoint = `/products${
+      params.toString() ? `?${params.toString()}` : ""
+    }`;
     const response = await this.request<Product<true>[]>(endpoint);
     return response.data;
   }
@@ -225,8 +225,9 @@ class ApiClient {
     if (filters?.page) params.append("page", filters.page.toString());
     if (filters?.limit) params.append("limit", filters.limit.toString());
 
-    const endpoint = `/products/paginated${params.toString() ? `?${params.toString()}` : ""
-      }`;
+    const endpoint = `/products/paginated${
+      params.toString() ? `?${params.toString()}` : ""
+    }`;
     const response = await this.request<PaginatedResponse<Product<true>>>(
       endpoint
     );
@@ -338,9 +339,12 @@ class ApiClient {
     if (filters?.startDate) params.append("startDate", filters.startDate);
     if (filters?.endDate) params.append("endDate", filters.endDate);
 
-    const endpoint = `/orders/paginated${params.toString() ? `?${params.toString()}` : ""
-      }`;
-    const response = await this.request<PaginatedOrderResponse, false>(endpoint);
+    const endpoint = `/orders/paginated${
+      params.toString() ? `?${params.toString()}` : ""
+    }`;
+    const response = await this.request<PaginatedOrderResponse, false>(
+      endpoint
+    );
     return response;
   }
 
@@ -351,13 +355,16 @@ class ApiClient {
     cancelledOrders: number;
     totalRevenue: number;
   }> {
-    const response = await this.request<{
-      totalOrders: number;
-      pendingOrders: number;
-      completedOrders: number;
-      cancelledOrders: number;
-      totalRevenue: number;
-    }, false>("/orders/stats");
+    const response = await this.request<
+      {
+        totalOrders: number;
+        pendingOrders: number;
+        completedOrders: number;
+        cancelledOrders: number;
+        totalRevenue: number;
+      },
+      false
+    >("/orders/stats");
     return response;
   }
 
@@ -386,7 +393,7 @@ class ApiClient {
   }
 
   async getOrderById(id: string): Promise<Order<true>> {
-    console.log("🪵 ~ ApiClient ~ getOrderById ~ id:", id)
+    console.log("🪵 ~ ApiClient ~ getOrderById ~ id:", id);
     const response = await this.request<Order<true>, false>(`/orders/${id}`);
     return response;
   }
@@ -632,8 +639,8 @@ export const useOrder = <TData = Order<true>>(
   >
 ) => {
   return useQuery({
-    queryKey: queryKeys.order(id || ''),
-    queryFn: () => apiClient.getOrderById(id || ''),
+    queryKey: queryKeys.order(id || ""),
+    queryFn: () => apiClient.getOrderById(id || ""),
     enabled: !!id,
     staleTime: 30 * 1000, // 30 seconds for orders
     gcTime: 2 * 60 * 1000,
@@ -921,7 +928,6 @@ export const useUpdateOrderStatus = (
     mutationFn: ({ id, status, comment }) =>
       apiClient.updateOrderStatus(id, status, comment),
     onSuccess: (updatedOrder, { id }) => {
-
       queryClient.setQueryData(queryKeys.order(id), updatedOrder);
 
       queryClient.setQueryData<Order<true>[]>(queryKeys.orders(), (old) =>

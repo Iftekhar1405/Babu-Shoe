@@ -244,7 +244,7 @@ export default function OrdersPage() {
   const calculateOrderTotal = (productDetails: any[]) => {
     return productDetails.reduce((total, item) => {
       const discountedPrice = item.amount * (1 - item.discountPercent / 100);
-      return total + (discountedPrice * item.quatity);
+      return total + (discountedPrice * item.quantity);
     }, 0);
   };
 
@@ -826,9 +826,9 @@ export default function OrdersPage() {
                           <TableCell>
                             <Badge
                               variant="outline"
-                              className={ORDER_MODES[order.mode as keyof typeof ORDER_MODES]?.color}
+                              className={ORDER_MODES[order.mode as unknown as keyof typeof ORDER_MODES]?.color}
                             >
-                              {ORDER_MODES[order.mode as keyof typeof ORDER_MODES]?.label || order.mode}
+                              {ORDER_MODES[order.mode as unknown as keyof typeof ORDER_MODES]?.label || order.mode}
                             </Badge>
                           </TableCell>
                         )}
@@ -836,10 +836,10 @@ export default function OrdersPage() {
                           <TableCell>
                             <Badge
                               variant="outline"
-                              className={PAYMENT_MODES[order.paymentMode as keyof typeof PAYMENT_MODES]?.color}
+                              className={PAYMENT_MODES[order.paymentMode as unknown as keyof typeof PAYMENT_MODES]?.color}
                             >
                               <CreditCard className="h-3 w-3 mr-1" />
-                              {PAYMENT_MODES[order.paymentMode as keyof typeof PAYMENT_MODES]?.label || order.paymentMode}
+                              {PAYMENT_MODES[order.paymentMode as unknown as keyof typeof PAYMENT_MODES]?.label || order.paymentMode}
                             </Badge>
                           </TableCell>
                         )}
@@ -873,7 +873,7 @@ export default function OrdersPage() {
                                       className="h-8 w-8 p-0"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        handleViewOrder(order._id);
+                                        handleViewOrder(order._id || "");
                                       }}
                                     >
                                       <Eye className="h-4 w-4" />
@@ -897,7 +897,7 @@ export default function OrdersPage() {
                                 <DropdownMenuContent align="end" className="w-48">
                                   <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
                                   <DropdownMenuSeparator />
-                                  <DropdownMenuItem onClick={() => handleViewOrder(order._id)}>
+                                  <DropdownMenuItem onClick={() => handleViewOrder(order._id || '')}>
                                     <Eye className="h-4 w-4 mr-2" />
                                     View Details
                                   </DropdownMenuItem>
@@ -911,7 +911,7 @@ export default function OrdersPage() {
                                         key={key}
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleStatusChange(order._id, key);
+                                          handleStatusChange(order._id || "", key);
                                         }}
                                       >
                                         <config.icon className="h-4 w-4 mr-2" />

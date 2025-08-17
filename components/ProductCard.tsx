@@ -65,15 +65,12 @@ export function ProductCard({ product, showAddToBill = true }: ProductCardProps)
       return;
     }
 
-    const finalPrice = product.price * quantity; // No discount by default
-    
     const billData = {
       productId: product._id!,
       quantity,
+      size: selectedSize,
       color: selectedColor.color,
-      amount: product.price,
       discountPercent: 0, // Default to no discount
-      finalPrice,
       salesPerson: undefined, // Can be added later
     };
 
@@ -83,11 +80,9 @@ export function ProductCard({ product, showAddToBill = true }: ProductCardProps)
         productId: product,
         quantity,
         color: selectedColor.color,
-        amount: product.price,
+        size: selectedSize,
         discountPercent: 0,
-        finalPrice,
       };
-      
       optimisticUpdates.addItemOptimistically(optimisticItem as any);
 
       // Make API call
@@ -108,7 +103,6 @@ export function ProductCard({ product, showAddToBill = true }: ProductCardProps)
     } catch (error) {
       // Revert optimistic update on error
       optimisticUpdates.removeItemOptimistically(product._id!, selectedColor.color || '');
-      
       console.error('Failed to add to bill:', error);
       toast.error('Failed to add to bill', {
         description: 'Please try again',

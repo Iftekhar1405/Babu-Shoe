@@ -1,8 +1,9 @@
+import { calculateTotal } from "@/lib/utils";
 import { DETAILS } from "@/public/details";
 import { CustomerInfo, ProductDetail } from "@/types";
 
 export const handlePrintBillWithCustomerInfo = (
-  billItems: ProductDetail<true>[], 
+  billItems: ProductDetail<true>[],
   customerInfo: CustomerInfo,
   defaultCompanyInfo = DETAILS.COMPANY_INFO
 ) => {
@@ -307,7 +308,7 @@ export const handlePrintBillWithCustomerInfo = (
                   <td class="text-center">${item.quantity}</td>
                   <td class="text-right">₹${item.productId.price.toFixed(2)}</td>
                   <td class="text-center">${item.discountPercent}%</td>
-                  <td class="text-right"><strong>₹${item.finalPrice.toFixed(2)}</strong></td>
+                  <td class="text-right"><strong>₹${calculateTotal(item).toFixed(2)}</strong></td>
                 </tr>
               `).join('')}
             </tbody>

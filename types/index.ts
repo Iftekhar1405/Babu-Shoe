@@ -20,7 +20,7 @@ export interface ColorData {
   _id?: string;
   color?: string;
   urls?: string[];
-  availableSize?: string[]
+  availableSize?: string[];
 }
 export interface Product<e = true> {
   _id?: string;
@@ -31,10 +31,10 @@ export interface Product<e = true> {
   categoryId?: e extends true ? Category : string;
   articleNo: string;
   colors: Partial<ColorData[]>;
-  companyId: e extends true ? { name: string, logo: string } : string;
+  companyId: e extends true ? { name: string; logo: string } : string;
   sizes: string[];
   inStock: boolean;
-  tags: e extends true ? { _id: string, name: string }[] : string[]
+  tags: e extends true ? { _id: string; name: string }[] : string[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -43,6 +43,7 @@ export interface ProductDetail<e extends boolean = true> {
   productId: Product<e>;
   quantity: number;
   color?: string;
+  size: string;
   amount?: number;
   discountPercent: number;
   finalPrice: number;
@@ -62,24 +63,38 @@ export interface ApiResponse<T> {
 }
 
 export enum ORDER_STATUS {
-  pending = 'pending',
-  confirmed = 'confirmed',
-  packed = 'packed',
-  dispatched = 'dispatched',
-  outfordeliver = 'outfordeliver',
-  delivered = 'delivered',
-  cancelled = 'cancelled',
-  return = 'return',
+  pending = "pending",
+  confirmed = "confirmed",
+  packed = "packed",
+  dispatched = "dispatched",
+  outfordeliver = "outfordeliver",
+  delivered = "delivered",
+  cancelled = "cancelled",
+  return = "return",
 }
 
+export enum ORDER_MODE {
+  "offline",
+  "online",
+}
 
-export enum ORDER_MODE { 'offline', 'online' }
+export enum ORDER_PAYMENT_MODE {
+  "UPI",
+  "Cash",
+  "credit",
+}
 
-export enum ORDER_PAYMENT_MODE { 'UPI', 'Cash', 'credit' }
+export enum ORDER_CANCELATION_REASON {
+  "customer_cancel",
+  "inventory_issue",
+  "others",
+}
 
-export enum ORDER_CANCELATION_REASON { 'customer_cancel', 'inventory_issue', 'others' }
-
-export enum ORDER_RETURN_REASON { 'damaged', 'wrong_product', 'others' }
+export enum ORDER_RETURN_REASON {
+  "damaged",
+  "wrong_product",
+  "others",
+}
 
 export interface Order<e extends boolean = true> {
   _id?: string;
@@ -106,8 +121,6 @@ export interface Order<e extends boolean = true> {
   updatedAt?: string;
 }
 
-
-
 export type Comment<e = true> = {
   user: e extends true ? User : string; // MongoId
   comment: string;
@@ -125,19 +138,19 @@ export type CreateOrder = {
   comments?: Comment[];
 };
 
-
 export type Tag = {
-  _id?: string,
-  name: string,
-}
+  _id?: string;
+  name: string;
+};
 
 export interface CreateOrderFromBillDto {
   name: string;
   productDetails: {
     productId: string;
-    quatity: number; // Note: keeping the typo to match backend
+    quantity: number; 
     color: string;
     amount: number;
+    size: string;
     discountPercent: number;
   }[];
   mode: string;
@@ -145,8 +158,6 @@ export interface CreateOrderFromBillDto {
   address: string;
   phoneNumber: string;
 }
-
-
 
 export interface CustomerInfo {
   customerName: string;
@@ -162,9 +173,10 @@ export interface OrderResponse {
   name: string;
   productDetails: {
     productId: string | { name: string; articleNo: string };
-    quatity: number;
+    quantity: number;
     color: string;
     amount: number;
+    size: string;
     discountPercent: number;
     salesPerson?: string;
   }[];
@@ -185,7 +197,6 @@ export interface HeaderProps {
   showSearch?: boolean;
   onMenuToggle?: () => void;
 }
-
 
 // Orders interface and type
 
