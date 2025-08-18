@@ -25,7 +25,8 @@ import {
   Factory,
   LogOut,
   User as UserIcon,
-  LogIn
+  LogIn,
+  BrainCircuit
 } from 'lucide-react';
 import { DETAILS } from '@/public/details';
 import { useAuth } from '@/lib/auth-hooks';
@@ -42,6 +43,12 @@ const navigation = [
     name: 'Products',
     href: '/products',
     icon: Package,
+    public: true,
+  },
+  {
+    name: 'AI Product Search',
+    href: '/ai-search',
+    icon: BrainCircuit,
     public: true,
   },
   {
@@ -100,7 +107,7 @@ export function Sidebar({ className }: SidebarProps) {
     return null;
   }
 
-  const visibleNavigation = navigation.filter(item => 
+  const visibleNavigation = navigation.filter(item =>
     item.public || isAuthenticated
   );
 
@@ -121,7 +128,7 @@ export function Sidebar({ className }: SidebarProps) {
         {visibleNavigation.map((item) => {
           const isActive = pathname === item.href;
           const isDisabled = !item.public && !isAuthenticated;
-          
+
           return (
             <Link
               key={item.name}
@@ -131,8 +138,8 @@ export function Sidebar({ className }: SidebarProps) {
                 isActive && !isDisabled
                   ? 'bg-black text-white shadow-sm'
                   : isDisabled
-                  ? 'text-gray-400 cursor-not-allowed'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    ? 'text-gray-400 cursor-not-allowed'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               )}
               onClick={(e) => {
                 if (isDisabled) {

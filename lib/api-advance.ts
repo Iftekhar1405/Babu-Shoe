@@ -118,7 +118,7 @@ class ApiClient {
       // Handle auth errors globally
       if (response.status === 401) {
         if (typeof window !== "undefined") {
-          const queryClient = useQueryClient?.();
+          const queryClient = useQueryClient();
           if (queryClient) {
             queryClient.removeQueries({ queryKey: authQueryKeys.all });
           }
@@ -209,9 +209,8 @@ class ApiClient {
     if (filters?.page) params.append("page", filters.page.toString());
     if (filters?.limit) params.append("limit", filters.limit.toString());
 
-    const endpoint = `/products${
-      params.toString() ? `?${params.toString()}` : ""
-    }`;
+    const endpoint = `/products${params.toString() ? `?${params.toString()}` : ""
+      }`;
     const response = await this.request<Product<true>[]>(endpoint);
     return response.data;
   }
@@ -225,9 +224,8 @@ class ApiClient {
     if (filters?.page) params.append("page", filters.page.toString());
     if (filters?.limit) params.append("limit", filters.limit.toString());
 
-    const endpoint = `/products/paginated${
-      params.toString() ? `?${params.toString()}` : ""
-    }`;
+    const endpoint = `/products/paginated${params.toString() ? `?${params.toString()}` : ""
+      }`;
     const response = await this.request<PaginatedResponse<Product<true>>>(
       endpoint
     );
@@ -339,9 +337,8 @@ class ApiClient {
     if (filters?.startDate) params.append("startDate", filters.startDate);
     if (filters?.endDate) params.append("endDate", filters.endDate);
 
-    const endpoint = `/orders/paginated${
-      params.toString() ? `?${params.toString()}` : ""
-    }`;
+    const endpoint = `/orders/paginated${params.toString() ? `?${params.toString()}` : ""
+      }`;
     const response = await this.request<PaginatedOrderResponse, false>(
       endpoint
     );
