@@ -210,7 +210,7 @@ export function ProductCard({ product, showAddToBill = true }: ProductCardProps)
             <p className="text-xs text-gray-500 font-medium">Available Colors:</p>
             <div className="flex flex-wrap gap-1">
               {product.colors.slice(0, 4).map((color, index) => (
-                <Badge
+               /* <Badge
                   key={index}
                   variant="outline"
                   className="text-xs px-2 py-1"
@@ -221,14 +221,26 @@ export function ProductCard({ product, showAddToBill = true }: ProductCardProps)
               {product.colors.length > 4 && (
                 <Badge variant="outline" className="text-xs px-2 py-1">
                   +{product.colors.length - 4} more
-                </Badge>
+                </Badge> */
+
+                <div
+                  key={index}
+                  className="h-5 w-5 rounded-full border border-gray-300"
+                  style={{ backgroundColor: color?.color }}
+                  title={color?.color} // shows tooltip on hover
+                      />
+                    ))}
+                    {product.colors.length > 4 && (
+                      <div className="h-5 w-5 rounded-full flex items-center justify-center text-[10px] border border-gray-300 bg-gray-100 text-gray-600">
+                        +{product.colors.length - 4}
+                </div>
               )}
             </div>
           </div>
 
           {/* Available Sizes Preview */}
           <div className="space-y-1">
-            <p className="text-xs text-gray-500 font-medium">Sizes:</p>
+            <p className="text-xs text-gray-500 font-medium">Available Sizes:</p>
             <div className="flex flex-wrap gap-1">
               {product.sizes.slice(0, 6).map((size, index) => (
                 <Badge
@@ -562,6 +574,14 @@ export function ProductCard({ product, showAddToBill = true }: ProductCardProps)
 
                       {/* Action Buttons */}
                       <div className="space-y-3 pt-4 border-t">
+
+                          {/* Reminder if no size is selected */}
+                            {!selectedSize && (
+                              <p className="text-sm text-red-500 mb-2">
+                                Please select a size before adding to bill.
+                              </p>
+                            )}
+
                         <Button
                           className="w-full h-12 bg-black hover:bg-gray-800 text-white font-semibold rounded-lg transition-all duration-200"
                           onClick={handleAddToBill}
