@@ -1,5 +1,8 @@
 import { User } from "./auth.type";
 
+// Re-export chat types for convenience
+export { MessageType, SearchStatus, type ChatMessage, type SearchState, type AIProductSearchProps } from './chat';
+
 export interface Category {
   _id?: string;
   name: string;
