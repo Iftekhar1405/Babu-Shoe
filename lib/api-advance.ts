@@ -50,7 +50,7 @@ export const queryKeys = {
 
   // Categories
   categories: () => [...queryKeys.all, "categories"] as const,
-  category: (id: string) => [...queryKeys.categories(), id] as const,
+  category: (id: string) => [...queryKeys.categories(), id] as const,//hellow teri maa kii
 
   // Products
   products: () => [...queryKeys.all, "products"] as const,
