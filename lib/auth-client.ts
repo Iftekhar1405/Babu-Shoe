@@ -1,6 +1,7 @@
 import { AuthResponse, RegisterData, LoginData, User } from '@/types/auth.type';
 import { ApiResponse } from '@/types';
-import { API_BASE_URL } from './api-advance';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL as string;
 
 class AuthClient {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
