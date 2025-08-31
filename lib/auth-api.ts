@@ -2,7 +2,7 @@
 import { AuthResponse, LoginData, RegisterData, User } from '@/types/auth.type';
 import { ApiError } from './api-advance';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL as string;
 
 export class AuthApiClient {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
