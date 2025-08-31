@@ -1,11 +1,10 @@
 import { AuthResponse, RegisterData, LoginData, User } from '@/types/auth.type';
 import { ApiResponse } from '@/types';
-
-const AUTH_API_BASE_URL = 'http://localhost:8080/api/auth';
+import { API_BASE_URL } from './api-advance';
 
 class AuthClient {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
-    const url = `${AUTH_API_BASE_URL}${endpoint}`;
+    const url = `${API_BASE_URL}${endpoint}`;
 
     try {
       const response = await fetch(url, {
@@ -13,7 +12,7 @@ class AuthClient {
           'Content-Type': 'application/json',
           ...options?.headers,
         },
-        credentials: 'include', 
+        credentials: 'include',
         ...options,
       });
 

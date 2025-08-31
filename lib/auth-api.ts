@@ -1,8 +1,7 @@
 
 import { AuthResponse, LoginData, RegisterData, User } from '@/types/auth.type';
-import { ApiError } from './api-advance';
+import { API_BASE_URL, ApiError } from './api-advance';
 
-const API_BASE_URL = 'http://localhost:8080/api';
 
 export class AuthApiClient {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -32,7 +31,7 @@ export class AuthApiClient {
       if (contentType && contentType.includes('application/json')) {
         return await response.json();
       }
-      
+
       return {} as T;
     } catch (error) {
       if (error instanceof ApiError) {
