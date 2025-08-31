@@ -999,7 +999,7 @@ export default function OrdersPage() {
                 </Button>
                 <div className="flex items-center gap-1">
                   {[...Array(Math.min(5, ordersResponse.pagination.totalPages))].map((_, i) => {
-                    let pageNum;
+                    let pageNum: number;
                     if (ordersResponse.pagination.totalPages <= 5) {
                       pageNum = i + 1;
                     } else if (filters.page <= 3) {

@@ -1,5 +1,6 @@
 import { useAuthContext } from '@/context/auth-context';
 import { useLogout } from '@/hooks/use-auth';
+import { Role } from '@/types/auth.type';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import { useState } from 'react';
 
@@ -35,13 +36,13 @@ export const UserMenu: React.FC = () => {
           <div className="px-4 py-2 border-b">
             <p className="text-sm font-medium text-gray-900">{user.name}</p>
             <p className="text-sm text-gray-500">{user.phoneNumber}</p>
-            {user.role === 'ADMIN' && (
+            {user.role === Role.ADMIN && (
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mt-1">
                 Admin
               </span>
             )}
           </div>
-          
+
           <a
             href="/profile"
             className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -49,7 +50,7 @@ export const UserMenu: React.FC = () => {
           >
             Profile
           </a>
-          
+
           <a
             href="/settings"
             className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -57,7 +58,7 @@ export const UserMenu: React.FC = () => {
           >
             Settings
           </a>
-          
+
           <button
             onClick={handleLogout}
             disabled={logoutMutation.isPending}

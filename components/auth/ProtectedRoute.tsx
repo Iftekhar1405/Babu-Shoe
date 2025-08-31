@@ -14,7 +14,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireAdmin = false,
   redirectTo = '/login',
 }) => {
-  const { isAuthenticated, isLoading, isAdmin, user } = useAuthContext();
+  const { isAuthenticated, isLoading, user } = useAuthContext();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -23,13 +23,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       if (!isAuthenticated) {
         const returnUrl = encodeURIComponent(pathname);
         router.push(`${redirectTo}?returnUrl=${returnUrl}`);
-      } else if (requireAdmin && !isAdmin) {
+      } else if (requireAdmin) {
         router.push('/unauthorized');
       } else if (!user?.isActive) {
         router.push('/account-inactive');
       }
     }
-  }, [isAuthenticated, isLoading, isAdmin, requireAdmin, router, pathname, redirectTo, user?.isActive]);
+  }, [isAuthenticated, isLoading, requireAdmin, router, pathname, redirectTo, user?.isActive]);
 
   if (isLoading) {
     return (
@@ -43,7 +43,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return null; // Will redirect
   }
 
-  if (requireAdmin && !isAdmin) {
+  if (requireAdmin) {
     return null; // Will redirect
   }
 

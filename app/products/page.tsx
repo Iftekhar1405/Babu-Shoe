@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ProductCard } from '@/components/ProductCard';
@@ -13,8 +13,15 @@ import { CustomerInfo, Product, ProductDetail } from '@/types';
 import { useCategories, useProducts, useProductSearch, useCurrentBill } from '@/lib/api-advance';
 import { useAuth } from '@/lib/auth-hooks';
 
+export default function Page() {
+  return (
+    <Suspense>
+      <ProductsPage />
+    </Suspense>
+  )
+}
 
-export default function ProductsPage() {
+function ProductsPage() {
   const searchParams = useSearchParams();
   const categoryId = searchParams.get('category');
   const [filteredProducts, setFilteredProducts] = useState<Product<true>[]>([]);
@@ -24,19 +31,19 @@ export default function ProductsPage() {
   const [isSearchMode, setIsSearchMode] = useState(false);
 
   const { isAuthenticated } = useAuth();
-  
+
   // API hooks
   const { data: categories, isLoading: categoryLoading } = useCategories();
   const { data: products, isLoading: productsLoading } = useProducts();
   const { data: searchResults, isLoading: searchLoading, error: searchError } = useProductSearch(searchQuery);
-  
-  // Current bill from API - only for authenticated users
-const { data: bill, isLoading: billLoading, refetch: refetchBill } = useCurrentBill({
-  enabled: isAuthenticated,
-});
 
-// Now bill can be Bill | null | undefined
-// Use it like: bill?.items?.length > 0
+  // Current bill from API - only for authenticated users
+  const { data: bill, isLoading: billLoading, refetch: refetchBill } = useCurrentBill({
+    enabled: isAuthenticated,
+  });
+
+  // Now bill can be Bill | null | undefined
+  // Use it like: bill?.items?.length > 0
 
   // Get bill items and total from API
   const billItems = bill?.items || [];
@@ -85,7 +92,7 @@ const { data: bill, isLoading: billLoading, refetch: refetchBill } = useCurrentB
     setSearchQuery(query);
     if (!query.trim()) {
       setIsSearchMode(false);
-      setSelectedCategory('all'); 
+      setSelectedCategory('all');
     }
   };
 
@@ -114,11 +121,11 @@ const { data: bill, isLoading: billLoading, refetch: refetchBill } = useCurrentB
       }
       return `Search Results for "${searchQuery}" (${filteredProducts.length})`;
     }
-    
+
     if (selectedCategory === 'all') {
       return `All Products (${filteredProducts.length})`;
     }
-    
+
     return `${getCategoryName(selectedCategory)} (${filteredProducts.length})`;
   };
 
@@ -150,9 +157,9 @@ const { data: bill, isLoading: billLoading, refetch: refetchBill } = useCurrentB
             </div>
 
             <div className="flex-1 max-w-md mx-8">
-              <SearchBar 
-                onSearch={handleSearchQueryChange} 
-                placeholder="Search products..." 
+              <SearchBar
+                onSearch={handleSearchQueryChange}
+                placeholder="Search products..."
               />
             </div>
 
@@ -217,10 +224,10 @@ const { data: bill, isLoading: billLoading, refetch: refetchBill } = useCurrentB
                   </SelectContent>
                 </Select>
               </div>
-              
+
               {/* Category count info */}
               <div className="text-sm text-gray-500">
-                {selectedCategory === 'all' 
+                {selectedCategory === 'all'
                   ? `Showing all ${filteredProducts.length} products`
                   : `${filteredProducts.length} products in ${getCategoryName(selectedCategory)}`
                 }
@@ -350,8 +357,8 @@ const { data: bill, isLoading: billLoading, refetch: refetchBill } = useCurrentB
         <BillDrawer
           isOpen={isBillOpen}
           onClose={() => setIsBillOpen(false)}
-          // onPrintBill={handlePrintBillWithCustomer}
-          // onAddToOrder={handleAddToOrder}
+        // onPrintBill={handlePrintBillWithCustomer}
+        // onAddToOrder={handleAddToOrder}
         />
       )}
     </div>

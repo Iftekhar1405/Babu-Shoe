@@ -106,11 +106,8 @@ interface UndoAction {
     description: string;
 }
 
-interface OrderDetailsPageProps {
-    orderIds: string;
-}
 
-export default function OrderDetailsPage({ orderIds }: OrderDetailsPageProps) {
+export default function OrderDetailsPage() {
     const orderId = typeof window !== 'undefined' ? window.location.pathname.split("/").pop() : '';
     const router = useRouter();
     const [isEditing, setIsEditing] = useState(false);

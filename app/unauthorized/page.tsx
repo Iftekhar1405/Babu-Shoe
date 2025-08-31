@@ -1,8 +1,17 @@
-import { useAuthContext } from "@/context/auth-context";
+"use client";
+
+import { AuthProvider, useAuthContext } from "@/context/auth-context";
+
+export default function Page() {
+  return (
+    <AuthProvider>
+      <UnauthorizedPage />
+    </AuthProvider>
+  )
+}
 
 
-
-export default function UnauthorizedPage() {
+function UnauthorizedPage() {
   const { user } = useAuthContext();
 
   return (
