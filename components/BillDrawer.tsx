@@ -26,6 +26,7 @@ import { useDebounce } from '@/hooks/use-debounce';
 import { handlePrintBillWithCustomerInfo } from './handlePrintBill';
 import { calculateTotal } from '@/lib/utils';
 import { handlePrintOrderSummaryFn } from './handlePrintOrderSummary';
+import RazorPayButton from './RazorpayPaymentButton';
 
 interface BillDrawerProps {
   isOpen: boolean;
@@ -825,6 +826,9 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
           )}
 
           <DialogFooter className="flex flex-col gap-3">
+            {createdOrder && createdOrder.paymentMode === 'UPI' && (
+              <RazorPayButton orderId={createdOrder._id} />
+            )}
             <Button
               onClick={handlePrintOrderSummary}
               className="w-full bg-black hover:bg-gray-800 text-white h-11"

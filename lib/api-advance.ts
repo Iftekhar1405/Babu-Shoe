@@ -41,6 +41,7 @@ interface Bill {
   updatedAt?: string;
 }
 import { authQueryKeys } from "./auth-hooks";
+import { CreatePayment, RazorpayOrderResponse, verifyPayment } from "@/types/payment.types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL as string;
 
@@ -79,6 +80,10 @@ export const queryKeys = {
   userBill: (userId?: string) =>
     [...queryKeys.bills(), "user", userId] as const,
   currentCart: () => [...queryKeys.bills(), "current-cart"] as const,
+
+  //payments
+  payments: () => [...queryKeys.all, "payments"] as const,
+
 } as const;
 
 // Types for better type safety
@@ -474,7 +479,24 @@ class ApiClient {
     });
     return response.data;
   }
+
+  async payForOrder(data: CreatePayment): Promise<RazorpayOrderResponse> {
+    const response = await this.request<RazorpayOrderResponse, false>("/orders/pay/create-order", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    return response;
+  }
+  async verifyPayment(data: verifyPayment): Promise<{ success: true }> {
+    const response = await this.request<{ success: true }>("/payment/verify", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    return response.data;
+  }
+
 }
+
 
 // Custom Error Class
 export class ApiError extends Error {

@@ -8,6 +8,7 @@ import { AuthProvider } from '@/hooks/use_authContext';
 import { Toaster } from 'sonner';
 import { ClientLayout } from '@/components/ClientLayout';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import Script from 'next/script';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -29,6 +30,7 @@ export default function RootLayout({
             <TooltipProvider>
               <ClientLayout>
                 {children}
+                <Script src="https://checkout.razorpay.com/v1/checkout.js" />
               </ClientLayout>
             </TooltipProvider>
             <Toaster position="top-right" richColors />
