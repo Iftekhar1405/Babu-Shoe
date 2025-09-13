@@ -1,7 +1,20 @@
 import { User } from "./auth.type";
 
+// Re-export auth types for convenience
+export { Role, type AuthResponse, type AuthState, type LoginData, type RegisterData } from './auth.type';
+
 // Re-export chat types for convenience
 export { MessageType, SearchStatus, type ChatMessage, type SearchState, type AIProductSearchProps } from './chat';
+
+// Re-export vendor types for convenience
+export { 
+  type Vendor, 
+  type CreateVendorDto, 
+  type UpdateVendorDto, 
+  type VendorFilters, 
+  type PaginatedVendorResponse, 
+  type ContactPerson 
+} from './vendor.types';
 
 export interface Category {
   _id?: string;
@@ -150,7 +163,7 @@ export interface CreateOrderFromBillDto {
   name: string;
   productDetails: {
     productId: string;
-    quantity: number; 
+    quantity: number;
     color: string;
     amount: number;
     size: string;
@@ -222,4 +235,54 @@ export interface PaginatedOrderResponse {
     total: number;
     totalPages: number;
   };
+}
+
+// Incoming Orders types based on the provided schema
+export interface IncomingOrderProductDetail {
+  productId: string;
+  color?: string;
+  sizes: string[];
+  quantity: number;
+  matchedQuantity: number;
+}
+
+export interface IncomingOrderComment {
+  user: string;
+  comment: string;
+}
+
+export interface IncomingOrder<e extends boolean = true> {
+  _id?: string;
+  vendorId: string;
+  productDetails: IncomingOrderProductDetail[];
+  matchedBy?: e extends true ? User : string;
+  matchedAt?: Date | string;
+  billImgUrl?: string;
+  matchPercentage?: number;
+  comments: IncomingOrderComment[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateIncomingOrderDto {
+  vendorId: string;
+  productDetails: {
+    productId: string;
+    color?: string;
+    sizes: string[];
+    quantity: number;
+  }[];
+  billImgUrl?: string;
+  matchPercentage?: number;
+  comments?: IncomingOrderComment[];
+}
+
+export interface UpdateIncomingOrderDto {
+  vendorId?: string;
+  productDetails?: IncomingOrderProductDetail[];
+  matchedBy?: string;
+  matchedAt?: Date | string;
+  billImgUrl?: string;
+  matchPercentage?: number;
+  comments?: IncomingOrderComment[];
 }

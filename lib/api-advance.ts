@@ -42,6 +42,7 @@ interface Bill {
 }
 import { authQueryKeys } from "./auth-hooks";
 import { CreatePayment, RazorpayOrderResponse, verifyPayment } from "@/types/payment.types";
+import { IncomingOrder, CreateIncomingOrderDto, UpdateIncomingOrderDto, IncomingOrderComment } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL as string;
 
@@ -83,6 +84,11 @@ export const queryKeys = {
 
   //payments
   payments: () => [...queryKeys.all, "payments"] as const,
+
+  // Incoming Orders
+  incomingOrders: () => [...queryKeys.all, "incoming-orders"] as const,
+  incomingOrder: (id: string) => [...queryKeys.incomingOrders(), id] as const,
+  incomingOrdersList: (filters?: any) => [...queryKeys.incomingOrders(), "list", filters] as const,
 
 } as const;
 
@@ -495,6 +501,42 @@ class ApiClient {
     return response.data;
   }
 
+  // Incoming Orders
+  async getIncomingOrders(): Promise<IncomingOrder[]> {
+    const response = await this.request<IncomingOrder[], false>("/incoming-orders");
+    return response;
+  }
+
+  async getIncomingOrderById(id: string): Promise<IncomingOrder> {
+    const response = await this.request<IncomingOrder>(`/incoming-orders/${id}`);
+    return response.data;
+  }
+
+  async createIncomingOrder(orderData: CreateIncomingOrderDto): Promise<IncomingOrder> {
+    const response = await this.request<IncomingOrder>("/incoming-orders", {
+      method: "POST",
+      body: JSON.stringify(orderData),
+    });
+    return response.data;
+  }
+
+  async updateIncomingOrder(id: string, updates: UpdateIncomingOrderDto): Promise<IncomingOrder> {
+    const response = await this.request<IncomingOrder>(`/incoming-orders/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(updates),
+    });
+    return response.data;
+  }
+
+  async deleteIncomingOrder(id: string): Promise<void> {
+    await this.request<void>(`/incoming-orders/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  // Remove the dedicated comment endpoint method since it might not exist
+  // Comments will be handled through the update endpoint
+
 }
 
 
@@ -511,6 +553,39 @@ export const apiClient = new ApiClient();
 // =============================================================================
 // QUERY HOOKS
 // =============================================================================
+
+// Incoming Orders Queries
+export const useIncomingOrders = <TData = IncomingOrder[]>(
+  options?: Omit<
+    UseQueryOptions<IncomingOrder[], ApiError, TData>,
+    "queryKey" | "queryFn"
+  >
+) => {
+  return useQuery({
+    queryKey: queryKeys.incomingOrders(),
+    queryFn: () => apiClient.getIncomingOrders(),
+    staleTime: 60 * 1000, // 1 minute
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    ...options,
+  });
+};
+
+export const useIncomingOrder = <TData = IncomingOrder>(
+  id: string | undefined,
+  options?: Omit<
+    UseQueryOptions<IncomingOrder, ApiError, TData>,
+    "queryKey" | "queryFn"
+  >
+) => {
+  return useQuery({
+    queryKey: queryKeys.incomingOrder(id || ""),
+    queryFn: () => apiClient.getIncomingOrderById(id || ""),
+    enabled: !!id,
+    staleTime: 30 * 1000, // 30 seconds
+    gcTime: 2 * 60 * 1000, // 2 minutes
+    ...options,
+  });
+};
 
 // Categories Queries
 export const useCategories = <TData = Category[]>(
@@ -876,6 +951,115 @@ export const useUploadImages = (
 ) => {
   return useMutation({
     mutationFn: (formData: FormData) => apiClient.uploadImages(formData),
+    ...options,
+  });
+};
+
+// Incoming Orders Mutations
+export const useCreateIncomingOrder = (
+  options?: UseMutationOptions<IncomingOrder, ApiError, CreateIncomingOrderDto>
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (orderData: CreateIncomingOrderDto) =>
+      apiClient.createIncomingOrder(orderData),
+    onSuccess: (newOrder) => {
+      // Invalidate incoming orders list
+      queryClient.invalidateQueries({ queryKey: queryKeys.incomingOrders() });
+
+      // Set the new order in cache
+      queryClient.setQueryData(
+        queryKeys.incomingOrder(newOrder._id || ""),
+        newOrder
+      );
+    },
+    onError: (error) => {
+      console.error("Failed to create incoming order:", error);
+    },
+    ...options,
+  });
+};
+
+export const useUpdateIncomingOrder = (
+  options?: UseMutationOptions<
+    IncomingOrder,
+    ApiError,
+    { id: string; data: UpdateIncomingOrderDto }
+  >
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }) => apiClient.updateIncomingOrder(id, data),
+    onSuccess: (updatedOrder, { id }) => {
+      // Update the specific order in cache
+      queryClient.setQueryData(queryKeys.incomingOrder(id), updatedOrder);
+
+      // Update the order in the orders list
+      queryClient.setQueryData<IncomingOrder[]>(queryKeys.incomingOrders(), (old) =>
+        old?.map((order) => (order._id === id ? updatedOrder : order))
+      );
+    },
+    onError: (error) => {
+      console.error("Failed to update incoming order:", error);
+    },
+    ...options,
+  });
+};
+
+export const useDeleteIncomingOrder = (
+  options?: UseMutationOptions<void, ApiError, string>
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => apiClient.deleteIncomingOrder(id),
+    onSuccess: (_, deletedId) => {
+      // Remove from orders list
+      queryClient.setQueryData<IncomingOrder[]>(queryKeys.incomingOrders(), (old) =>
+        old?.filter((order) => order._id !== deletedId)
+      );
+
+      // Remove the specific order query
+      queryClient.removeQueries({ queryKey: queryKeys.incomingOrder(deletedId) });
+    },
+    onError: (error) => {
+      console.error("Failed to delete incoming order:", error);
+    },
+    ...options,
+  });
+};
+
+export const useAddIncomingOrderComment = (
+  options?: UseMutationOptions<
+    IncomingOrder,
+    ApiError,
+    { id: string; comment: IncomingOrderComment }
+  >
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, comment }) => {
+      // Fallback to updating the order with new comments array if dedicated endpoint doesn't exist
+      return apiClient.getIncomingOrderById(id).then(currentOrder => {
+        const updatedComments = [...(currentOrder.comments || []), comment];
+        return apiClient.updateIncomingOrder(id, { comments: updatedComments });
+      });
+    },
+    onSuccess: (updatedOrder, { id }) => {
+      // Update the specific order in cache
+      queryClient.setQueryData(queryKeys.incomingOrder(id), updatedOrder);
+
+      // Update the order in the orders list
+      queryClient.setQueryData<IncomingOrder[]>(queryKeys.incomingOrders(), (old) =>
+        old?.map((order) => (order._id === id ? updatedOrder : order))
+      );
+    },
+    onError: (error) => {
+      console.error("Failed to add comment:", error);
+    },
     ...options,
   });
 };

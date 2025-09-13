@@ -26,7 +26,9 @@ import {
   LogOut,
   User as UserIcon,
   LogIn,
-  BrainCircuit
+  BrainCircuit,
+  Package2,
+  Building
 } from 'lucide-react';
 import { DETAILS } from '@/public/details';
 import { useAuth } from '@/lib/auth-hooks';
@@ -85,6 +87,18 @@ const navigation = [
     name: 'Management',
     href: '/management',
     icon: Settings,
+    public: false,
+  },
+  {
+    name: 'Incoming Orders',
+    href: '/incoming-orders',
+    icon: Package2,
+    public: false,
+  },
+  {
+    name: 'Vendors',
+    href: '/vendors',
+    icon: Building,
     public: false,
   },
 ];
