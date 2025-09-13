@@ -52,8 +52,8 @@ class VendorApiClient {
     if (filters?.limit) params.append("limit", filters.limit.toString());
 
     const endpoint = `/vendors${params.toString() ? `?${params.toString()}` : ""}`;
-    const response = await this.request<{ data: Vendor[] }>(endpoint);
-    return response.data;
+    const response = await this.request<Vendor[]>(endpoint);
+    return response;
   }
 
   async getVendorsPaginated(filters?: VendorFilters): Promise<PaginatedVendorResponse> {
@@ -75,11 +75,11 @@ class VendorApiClient {
   }
 
   async createVendor(data: CreateVendorDto): Promise<Vendor> {
-    const response = await this.request<{ data: Vendor }>("/vendors", {
+    const response = await this.request<Vendor>("/vendors", {
       method: "POST",
       body: JSON.stringify(data),
     });
-    return response.data;
+    return response;
   }
 
   async updateVendor(id: string, data: UpdateVendorDto): Promise<Vendor> {
