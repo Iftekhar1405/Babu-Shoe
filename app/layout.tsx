@@ -9,6 +9,7 @@ import { Toaster } from 'sonner';
 import { ClientLayout } from '@/components/ClientLayout';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import Script from 'next/script';
+import { ScreenSizeProvider } from '@/context/Screen-size-context';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -26,7 +27,8 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>
+          <ScreenSizeProvider>
+            <AuthProvider>
             <TooltipProvider>
               <ClientLayout>
                 {children}
@@ -35,6 +37,7 @@ export default function RootLayout({
             </TooltipProvider>
             <Toaster position="top-right" richColors />
           </AuthProvider>
+          </ScreenSizeProvider>
         </QueryClientProvider>
       </body>
     </html>

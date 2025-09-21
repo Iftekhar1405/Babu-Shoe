@@ -8,10 +8,11 @@ import { SearchBar } from '@/components/SearchBar';
 import { BillDrawer } from '@/components/BillDrawer';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, ShoppingBag, Loader2 } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, Loader2, Menu, X, Filter } from 'lucide-react';
 import { CustomerInfo, Product, ProductDetail } from '@/types';
 import { useCategories, useProducts, useProductSearch, useCurrentBill } from '@/lib/api-advance';
 import { useAuth } from '@/lib/auth-hooks';
+import { Label } from '@/components/ui/label';
 
 export default function Page() {
   return (
@@ -27,6 +28,7 @@ function ProductsPage() {
   const [filteredProducts, setFilteredProducts] = useState<Product<true>[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryId || 'all');
   const [isBillOpen, setIsBillOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchMode, setIsSearchMode] = useState(false);
 
@@ -41,9 +43,6 @@ function ProductsPage() {
   const { data: bill, isLoading: billLoading, refetch: refetchBill } = useCurrentBill({
     enabled: isAuthenticated,
   });
-
-  // Now bill can be Bill | null | undefined
-  // Use it like: bill?.items?.length > 0
 
   // Get bill items and total from API
   const billItems = bill?.items || [];
@@ -97,7 +96,6 @@ function ProductsPage() {
   };
 
   const handlePrintBillWithCustomer = (items: ProductDetail<true>[], customerInfo: CustomerInfo) => {
-
     console.log('Printing bill for:', customerInfo);
   };
 
@@ -146,53 +144,67 @@ function ProductsPage() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
+            {/* Left section - Back button and title */}
+            <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1 sm:flex-none">
               <Link href="/">
-                <Button variant="ghost" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
+                <Button variant="ghost" size="sm" className="px-2 sm:px-3">
+                  <ArrowLeft className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Back</span>
                 </Button>
               </Link>
-              <h1 className="text-2xl font-bold text-black">Products</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-black truncate">Products</h1>
             </div>
 
-            <div className="flex-1 max-w-md mx-8">
+            {/* Center section - Search bar (hidden on mobile) */}
+            <div className="hidden md:flex flex-1 max-w-md mx-8">
               <SearchBar
                 onSearch={handleSearchQueryChange}
                 placeholder="Search products..."
               />
             </div>
 
-            <div className="flex items-center space-x-4">
+            {/* Right section - Actions */}
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* Mobile filter toggle */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsFilterOpen(true)}
+                className="md:hidden p-2"
+              >
+                <Filter className="h-4 w-4" />
+              </Button>
+
               {isAuthenticated ? (
                 <Button
                   onClick={() => setIsBillOpen(true)}
                   variant="outline"
-                  className="relative border-gray-300 hover:bg-gray-50"
+                  className="relative border-gray-300 hover:bg-gray-50 px-2 sm:px-4"
                   disabled={billLoading}
                 >
                   {billLoading ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Loading...
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="hidden sm:inline ml-2">Loading...</span>
                     </>
                   ) : (
                     <>
-                      <ShoppingBag className="h-5 w-5 mr-2" />
-                      Bill ({billItemsCount})
+                      <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
+                      <span className="hidden sm:inline">Bill ({billItemsCount})</span>
+                      <span className="sm:hidden">({billItemsCount})</span>
                       {billItemsCount > 0 && (
                         <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                          {billItemsCount}
+                          {billItemsCount > 99 ? '99+' : billItemsCount}
                         </span>
                       )}
                     </>
                   )}
                 </Button>
               ) : (
-                <div className="flex items-center space-x-3">
-                  <span className="text-sm text-gray-600">Sign in to use cart</span>
+                <div className="flex items-center space-x-2 sm:space-x-3">
+                  <span className="hidden sm:inline text-sm text-gray-600">Sign in to use cart</span>
                   <Link href="/auth/login">
-                    <Button size="sm" className="bg-black hover:bg-gray-800 text-white">
+                    <Button size="sm" className="bg-black hover:bg-gray-800 text-white px-3 sm:px-4">
                       Sign In
                     </Button>
                   </Link>
@@ -200,16 +212,24 @@ function ProductsPage() {
               )}
             </div>
           </div>
+
+          {/* Mobile search bar */}
+          <div className="md:hidden pb-4">
+            <SearchBar
+              onSearch={handleSearchQueryChange}
+              placeholder="Search products..."
+            />
+          </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Filters - Hide category filter when searching */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        {/* Desktop Filters */}
         {!isSearchMode && (
-          <div className="mb-8">
-            <div className="flex items-center space-x-4">
+          <div className="hidden md:block mb-6 lg:mb-8">
+            <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium text-gray-700">Filter by category:</span>
+                <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Filter by category:</span>
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                   <SelectTrigger className="w-48">
                     <SelectValue />
@@ -238,18 +258,18 @@ function ProductsPage() {
 
         {/* Search Mode Indicator */}
         {isSearchMode && searchQuery && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <span className="text-blue-800 font-medium">🔍 Search Mode Active</span>
-                <span className="text-blue-600">Showing search results for "{searchQuery}"</span>
+          <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-blue-800 font-medium text-sm sm:text-base">🔍 Search Mode Active</span>
+                <span className="text-blue-600 text-sm">Showing results for "{searchQuery}"</span>
                 {searchLoading && <Loader2 className="h-4 w-4 animate-spin text-blue-600" />}
               </div>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => handleSearchQueryChange('')}
-                className="text-blue-800 hover:bg-blue-100"
+                className="text-blue-800 hover:bg-blue-100 self-start sm:self-auto"
               >
                 Clear Search
               </Button>
@@ -259,21 +279,23 @@ function ProductsPage() {
 
         {/* Authentication Notice for Non-Authenticated Users */}
         {!isAuthenticated && (
-          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <div className="flex items-center space-x-3">
-              <ShoppingBag className="h-5 w-5 text-amber-600" />
-              <div>
-                <p className="text-amber-800 font-medium">Sign in to add products to your bill</p>
-                <p className="text-amber-700 text-sm">Create an account or sign in to access billing features.</p>
+          <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex items-start space-x-3 flex-1">
+                <ShoppingBag className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-amber-800 font-medium text-sm sm:text-base">Sign in to add products to your bill</p>
+                  <p className="text-amber-700 text-sm mt-1">Create an account or sign in to access billing features.</p>
+                </div>
               </div>
-              <div className="flex space-x-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Link href="/auth/login">
-                  <Button size="sm" variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-100">
+                  <Button size="sm" variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-100 w-full sm:w-auto">
                     Sign In
                   </Button>
                 </Link>
                 <Link href="/auth/register">
-                  <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white">
+                  <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white w-full sm:w-auto">
                     Register
                   </Button>
                 </Link>
@@ -283,8 +305,8 @@ function ProductsPage() {
         )}
 
         {/* Results Header */}
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">
+        <div className="mb-4 sm:mb-6">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
             {getResultsTitle()}
           </h2>
           {searchError && (
@@ -296,20 +318,20 @@ function ProductsPage() {
 
         {/* Loading State */}
         {searchLoading && isSearchMode && (
-          <div className="text-center py-12">
-            <Loader2 className="h-12 w-12 animate-spin text-gray-400 mx-auto mb-4" />
+          <div className="text-center py-8 sm:py-12">
+            <Loader2 className="h-8 sm:h-12 w-8 sm:w-12 animate-spin text-gray-400 mx-auto mb-4" />
             <p className="text-gray-500">Searching products...</p>
           </div>
         )}
 
         {/* Empty State */}
         {!searchLoading && filteredProducts.length === 0 && (
-          <div className="text-center py-12">
-            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <ShoppingBag className="h-12 w-12 text-gray-400" />
+          <div className="text-center py-8 sm:py-12">
+            <div className="w-16 h-16 sm:w-24 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ShoppingBag className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
-            <p className="text-gray-500 mb-4">
+            <p className="text-gray-500 mb-4 px-4 text-sm sm:text-base">
               {isSearchMode && searchQuery
                 ? `No products match your search for "${searchQuery}".`
                 : selectedCategory === 'all'
@@ -331,7 +353,7 @@ function ProductsPage() {
 
         {/* Products Grid */}
         {!searchLoading && filteredProducts.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6">
             {filteredProducts.map((product) => (
               <ProductCard
                 key={product._id}
@@ -344,7 +366,7 @@ function ProductsPage() {
 
         {/* Load More Button (for future pagination) */}
         {!searchLoading && filteredProducts.length > 0 && filteredProducts.length >= 20 && (
-          <div className="text-center mt-8">
+          <div className="text-center mt-6 sm:mt-8">
             <Button variant="outline" className="border-gray-300 hover:bg-gray-50">
               Load More Products
             </Button>
@@ -357,8 +379,6 @@ function ProductsPage() {
         <BillDrawer
           isOpen={isBillOpen}
           onClose={() => setIsBillOpen(false)}
-        // onPrintBill={handlePrintBillWithCustomer}
-        // onAddToOrder={handleAddToOrder}
         />
       )}
     </div>

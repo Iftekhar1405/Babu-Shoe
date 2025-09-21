@@ -33,8 +33,6 @@ interface BillDrawerProps {
   onClose: () => void;
 }
 
-
-
 export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
   const [orderSummaryOpen, setOrderSummaryOpen] = useState(false);
@@ -356,18 +354,18 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
       />
 
       {/* Drawer */}
-      <div className="fixed right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl z-50 transform transition-transform duration-300 flex flex-col">
+      <div className="fixed right-0 top-0 h-full w-full sm:max-w-md lg:max-w-lg bg-white shadow-2xl z-50 transform transition-transform duration-300 flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Bill Summary</h2>
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 bg-gray-50">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 truncate">Bill Summary</h2>
             {items.length > 0 && (
               <p className="text-sm text-gray-600 mt-1">
                 {totalItems} item{totalItems !== 1 ? 's' : ''} • ₹{total.toFixed(2)}
               </p>
             )}
           </div>
-          <Button variant="ghost" size="sm" onClick={onClose} className="hover:bg-gray-200">
+          <Button variant="ghost" size="sm" onClick={onClose} className="hover:bg-gray-200 ml-2 flex-shrink-0">
             <X className="h-5 w-5" />
           </Button>
         </div>
@@ -375,14 +373,14 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center h-full text-center p-8">
+            <div className="flex flex-col items-center justify-center h-full text-center p-6 sm:p-8">
               <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-4" />
               <p className="text-gray-500">Loading bill...</p>
             </div>
           ) : error ? (
-            <div className="flex flex-col items-center justify-center h-full text-center p-8">
-              <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                <X className="h-12 w-12 text-red-400" />
+            <div className="flex flex-col items-center justify-center h-full text-center p-6 sm:p-8">
+              <div className="w-16 h-16 sm:w-24 sm:h-24 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <X className="h-8 w-8 sm:h-12 sm:w-12 text-red-400" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Error loading bill</h3>
               <p className="text-gray-500 mb-4">Please try again</p>
@@ -391,21 +389,21 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
               </Button>
             </div>
           ) : items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center p-8">
-              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <ShoppingBag className="h-12 w-12 text-gray-400" />
+            <div className="flex flex-col items-center justify-center h-full text-center p-6 sm:p-8">
+              <div className="w-16 h-16 sm:w-24 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <ShoppingBag className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No items in bill</h3>
-              <p className="text-gray-500">Add products to get started with your bill</p>
+              <p className="text-gray-500 text-sm">Add products to get started with your bill</p>
             </div>
           ) : (
-            <div className="p-4 space-y-4">
+            <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
               {items.map((item, index) => (
                 <Card key={`${item.productId._id}-${item.color}-${index}`} className="border-gray-200 hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex gap-4">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex gap-3 sm:gap-4">
                       {/* Product Image */}
-                      <div className="relative h-20 w-20 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                      <div className="relative h-16 w-16 sm:h-20 sm:w-20 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
                         <Image
                           src={getColorImage(item.productId, item.color || '')}
                           alt={`${item.productId.name} - ${item.color}`}
@@ -419,15 +417,15 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
 
                       <div className="flex-1 min-w-0">
                         {/* Product Info */}
-                        <div className="mb-3">
-                          <h4 className="font-semibold text-gray-900 truncate text-sm">
+                        <div className="mb-2 sm:mb-3">
+                          <h4 className="font-semibold text-gray-900 text-sm truncate">
                             {item.productId.name}
                           </h4>
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1">
                             <span className="text-xs text-gray-500">
                               ₹{item.productId.price.toFixed(2)} each
                             </span>
-                            <Badge variant="outline" className="text-xs px-2 py-0">
+                            <Badge variant="outline" className="text-xs px-1.5 py-0">
                               Art: {item.productId.articleNo}
                             </Badge>
                           </div>
@@ -436,16 +434,21 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
                               {item.color}
                             </Badge>
                           )}
+                          {item.size && (
+                            <Badge variant="outline" className="text-xs mt-1 ml-1">
+                              Size: {item.size}
+                            </Badge>
+                          )}
                         </div>
 
                         {/* Quantity Controls */}
-                        <div className="flex items-center gap-2 mb-3">
-                          <Label className="text-xs font-medium text-gray-600">Qty:</Label>
+                        <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                          <Label className="text-xs font-medium text-gray-600 min-w-0 flex-shrink-0">Qty:</Label>
                           <div className="flex items-center gap-1">
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-7 w-7 p-0"
+                              className="h-6 w-6 sm:h-7 sm:w-7 p-0"
                               onClick={() => handleQuantityButtonClick(
                                 item.productId._id!,
                                 item.color || '',
@@ -457,9 +460,9 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
                               }
                             >
                               {isUpdatingItem ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
+                                <Loader2 className="h-2 w-2 sm:h-3 sm:w-3 animate-spin" />
                               ) : (
-                                <Minus className="h-3 w-3" />
+                                <Minus className="h-2 w-2 sm:h-3 sm:w-3" />
                               )}
                             </Button>
                             <Input
@@ -471,13 +474,13 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
                                 item.color || '',
                                 parseInt(e.target.value) || 1
                               )}
-                              className="h-7 w-16 text-sm text-center p-1"
+                              className="h-6 w-12 sm:h-7 sm:w-16 text-xs sm:text-sm text-center p-1"
                               disabled={isUpdatingItem}
                             />
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-7 w-7 p-0"
+                              className="h-6 w-6 sm:h-7 sm:w-7 p-0"
                               onClick={() => handleQuantityButtonClick(
                                 item.productId._id!,
                                 item.color || '',
@@ -486,16 +489,16 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
                               disabled={isUpdatingItem}
                             >
                               {isUpdatingItem ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
+                                <Loader2 className="h-2 w-2 sm:h-3 sm:w-3 animate-spin" />
                               ) : (
-                                <Plus className="h-3 w-3" />
+                                <Plus className="h-2 w-2 sm:h-3 sm:w-3" />
                               )}
                             </Button>
                           </div>
                         </div>
 
                         {/* Discount Input */}
-                        <div className="mb-3">
+                        <div className="mb-2 sm:mb-3">
                           <Label className="text-xs font-medium text-gray-600">Discount %:</Label>
                           <Input
                             type="number"
@@ -507,7 +510,7 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
                               item.color || '',
                               parseFloat(e.target.value) || 0
                             )}
-                            className="h-8 text-sm mt-1"
+                            className="h-7 sm:h-8 text-xs sm:text-sm mt-1"
                             placeholder="0"
                             disabled={isUpdatingItem}
                           />
@@ -515,7 +518,7 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
 
                         {/* Price Breakdown & Actions */}
                         <div className="flex items-center justify-between">
-                          <div className="text-left">
+                          <div className="text-left min-w-0 flex-1">
                             <div className="text-xs text-gray-500">
                               ₹{(item.productId.price * item.quantity).toFixed(2)}
                               {item.discountPercent > 0 && (
@@ -532,13 +535,13 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleRemoveItem(item.productId._id!, item.color || '')}
-                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            className="h-6 w-6 sm:h-8 sm:w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0 ml-2"
                             disabled={isRemovingItem}
                           >
                             {isRemovingItem ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                             ) : (
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                             )}
                           </Button>
                         </div>
@@ -553,7 +556,7 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
 
         {/* Footer */}
         {items.length > 0 && (
-          <div className="border-t border-gray-200 bg-gray-50 p-6 space-y-4">
+          <div className="border-t border-gray-200 bg-gray-50 p-4 sm:p-6 space-y-3 sm:space-y-4">
             {/* Total Summary */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
@@ -576,10 +579,10 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2 sm:gap-3">
               <Button
                 onClick={openCustomerDialog}
-                className="w-full bg-black hover:bg-gray-800 text-white h-12 font-semibold"
+                className="w-full bg-black hover:bg-gray-800 text-white h-10 sm:h-12 font-semibold text-sm sm:text-base"
                 disabled={isUpdatingItem || isRemovingItem}
               >
                 <User className="h-4 w-4 mr-2" />
@@ -589,7 +592,7 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
                 variant="outline"
                 onClick={handleClearBill}
                 disabled={clearBillMutation.isPending || isUpdatingItem || isRemovingItem}
-                className="w-full border-red-200 text-red-600 hover:bg-red-50 h-10"
+                className="w-full border-red-200 text-red-600 hover:bg-red-50 h-8 sm:h-10 text-sm sm:text-base"
               >
                 {clearBillMutation.isPending ? (
                   <>
@@ -610,15 +613,15 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
 
       {/* Customer Info Dialog - Single Modal for Both Actions */}
       <Dialog open={customerDialogOpen} onOpenChange={setCustomerDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-xs sm:max-w-md mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center">
-              <User className="h-5 w-5 mr-2" />
+            <DialogTitle className="text-lg sm:text-xl font-bold flex items-center">
+              <User className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               Customer Information
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-3 sm:space-y-4 py-4">
             <div>
               <Label htmlFor="customerName" className="text-sm font-medium">
                 Customer Name *
@@ -628,7 +631,7 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
                 value={customerInfo.customerName}
                 onChange={(e) => setCustomerInfo(prev => ({ ...prev, customerName: e.target.value }))}
                 placeholder="Enter customer name"
-                className="mt-1"
+                className="mt-1 text-sm sm:text-base"
               />
             </div>
 
@@ -641,7 +644,7 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
                 value={customerInfo.phoneNumber}
                 onChange={(e) => setCustomerInfo(prev => ({ ...prev, phoneNumber: e.target.value }))}
                 placeholder="Enter phone number"
-                className="mt-1"
+                className="mt-1 text-sm sm:text-base"
               />
             </div>
 
@@ -654,7 +657,7 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
                 value={customerInfo.address}
                 onChange={(e) => setCustomerInfo(prev => ({ ...prev, address: e.target.value }))}
                 placeholder="Enter delivery address (optional for print only)"
-                className="mt-1"
+                className="mt-1 text-sm sm:text-base"
                 rows={3}
               />
             </div>
@@ -705,10 +708,10 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
             </div>
           </div>
 
-          <DialogFooter className="flex flex-col gap-3">
+          <DialogFooter className="flex flex-col gap-2 sm:gap-3">
             <Button
               onClick={handleCreateOrder}
-              className="w-full bg-black hover:bg-gray-800 text-white h-11"
+              className="w-full bg-black hover:bg-gray-800 text-white h-10 sm:h-11 text-sm sm:text-base"
               disabled={createOrderMutation.isPending}
             >
               {createOrderMutation.isPending ? (
@@ -726,7 +729,7 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
             <Button
               variant="outline"
               onClick={handlePrintBill}
-              className="w-full border-gray-300 hover:bg-gray-50 h-11"
+              className="w-full border-gray-300 hover:bg-gray-50 h-10 sm:h-11 text-sm sm:text-base"
             >
               <Printer className="h-4 w-4 mr-2" />
               Print Bill Only
@@ -737,51 +740,51 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
 
       {/* Order Success Dialog */}
       <Dialog open={orderSummaryOpen} onOpenChange={setOrderSummaryOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-xs sm:max-w-md mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center text-green-600">
-              <CheckCircle className="h-6 w-6 mr-2" />
+            <DialogTitle className="text-lg sm:text-xl font-bold flex items-center text-green-600">
+              <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
               Order Placed Successfully!
             </DialogTitle>
           </DialogHeader>
 
           {createdOrder && (
-            <div className="space-y-4 py-4">
-              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+            <div className="space-y-3 sm:space-y-4 py-4">
+              <div className="bg-green-50 p-3 sm:p-4 rounded-lg border border-green-200">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600 mb-1">
+                  <div className="text-xl sm:text-2xl font-bold text-green-600 mb-1">
                     Order #{createdOrder.orderNumber}
                   </div>
-                  <div className="text-sm text-green-700">
+                  <div className="text-xs sm:text-sm text-green-700">
                     {new Date(createdOrder.createdAt).toLocaleString()}
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Customer:</span>
-                  <span className="font-medium">{createdOrder.name}</span>
+                  <span className="font-medium text-sm">{createdOrder.name}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Phone:</span>
-                  <span className="font-medium">{createdOrder.phoneNumber}</span>
+                  <span className="font-medium text-sm">{createdOrder.phoneNumber}</span>
                 </div>
                 <div className="flex items-start justify-between">
                   <span className="text-sm text-gray-600">Address:</span>
-                  <span className="font-medium text-right flex-1 ml-4">{createdOrder.address}</span>
+                  <span className="font-medium text-right flex-1 ml-4 text-sm">{createdOrder.address}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Mode:</span>
-                  <span className="font-medium capitalize">{createdOrder.mode}</span>
+                  <span className="font-medium capitalize text-sm">{createdOrder.mode}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Payment:</span>
-                  <span className="font-medium">{createdOrder.paymentMode}</span>
+                  <span className="font-medium text-sm">{createdOrder.paymentMode}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Status:</span>
-                  <Badge variant="secondary" className="capitalize">
+                  <Badge variant="secondary" className="capitalize text-xs">
                     {createdOrder.status}
                   </Badge>
                 </div>
@@ -790,32 +793,34 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
               <Separator />
 
               <div className="space-y-2">
-                <h4 className="font-semibold text-gray-900">Order Items:</h4>
-                {createdOrder.productDetails.map((item, index) => {
-                  console.log("🪵 ~ item:", item)
-                  const originalItem = items.find(billItem => billItem.productId._id === item.productId);
-                  const itemTotal = (item.amount * item.quantity) * (1 - item.discountPercent / 100);
+                <h4 className="font-semibold text-gray-900 text-sm sm:text-base">Order Items:</h4>
+                <div className="max-h-40 sm:max-h-48 overflow-y-auto">
+                  {createdOrder.productDetails.map((item, index) => {
+                    console.log("🪵 ~ item:", item)
+                    const originalItem = items.find(billItem => billItem.productId._id === item.productId);
+                    const itemTotal = (item.amount * item.quantity) * (1 - item.discountPercent / 100);
 
-                  return (
-                    <div key={index} className="flex justify-between items-center text-sm py-1">
-                      <div className="flex-1">
-                        <div className="font-medium">
-                          {originalItem?.productId.name || 'Product'} - {item.color}
+                    return (
+                      <div key={index} className="flex justify-between items-center text-sm py-1">
+                        <div className="flex-1 min-w-0 pr-2">
+                          <div className="font-medium truncate">
+                            {originalItem?.productId.name || 'Product'} - {item.color}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            ₹{item.amount} × {item.quantity}
+                            {item.discountPercent > 0 && ` (-${item.discountPercent}%)`}
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500">
-                          ₹{item.amount} × {item.quantity}
-                          {item.discountPercent > 0 && ` (-${item.discountPercent}%)`}
+                        <div className="font-medium flex-shrink-0">
+                          ₹{itemTotal.toFixed(2)}
                         </div>
                       </div>
-                      <div className="font-medium">
-                        ₹{itemTotal.toFixed(2)}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
 
                 <Separator />
-                <div className="flex justify-between font-bold text-lg pt-2">
+                <div className="flex justify-between font-bold text-base sm:text-lg pt-2">
                   <span>Total Amount:</span>
                   <span>₹{createdOrder.productDetails.reduce((sum, item) => {
                     return sum + (item.amount * item.quantity) * (1 - item.discountPercent / 100);
@@ -825,13 +830,13 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
             </div>
           )}
 
-          <DialogFooter className="flex flex-col gap-3">
+          <DialogFooter className="flex flex-col gap-2 sm:gap-3">
             {createdOrder && createdOrder.paymentMode === 'UPI' && (
               <RazorPayButton orderId={createdOrder._id} />
             )}
             <Button
               onClick={handlePrintOrderSummary}
-              className="w-full bg-black hover:bg-gray-800 text-white h-11"
+              className="w-full bg-black hover:bg-gray-800 text-white h-10 sm:h-11 text-sm sm:text-base"
             >
               <Printer className="h-4 w-4 mr-2" />
               Print Order Summary
@@ -839,7 +844,7 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
             <Button
               variant="outline"
               onClick={handleCloseOrderSummary}
-              className="w-full h-11"
+              className="w-full h-10 sm:h-11 text-sm sm:text-base"
             >
               Close
             </Button>

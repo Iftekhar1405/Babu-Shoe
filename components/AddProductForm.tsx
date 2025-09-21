@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -10,11 +11,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { X, Plus, Upload, Loader2, Check, Image as ImageIcon } from 'lucide-react';
+import { X, Plus, Upload, Loader2, Check, Image as ImageIcon, Palette, Package, Tag, IndianRupee } from 'lucide-react';
 import { useCategories, useCreateProduct, useCreateTag, useTags, useUploadImagesLegacy } from '@/lib/api-advance';
 import { Product, ColorData } from '@/types';
 import { toast } from 'sonner';
 import { useCompanies } from '@/lib/company.service';
+import { useScreenSize } from '@/context/Screen-size-context';
+
 
 const productSchema = z.object({
   name: z.string().min(1, 'Product name is required').max(200, 'Name too long'),
@@ -44,6 +47,7 @@ interface AddProductFormProps {
 }
 
 export function AddProductForm({ onSuccess }: AddProductFormProps) {
+ const { isMobile } = useScreenSize();
   const [colors, setColors] = useState<ColorFormData[]>([
     { id: '1', colorName: '', urls: [], isUploading: false, availableSize: [] }
   ]);
@@ -54,7 +58,6 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
   const { data: categories } = useCategories();
   const { data: tags, isLoading: tagsLoading } = useTags()
   const { data: companies } = useCompanies()
-
 
   const { mutate, isPending: isSubmitting } = useCreateProduct({
     onSuccess: () => {
@@ -103,9 +106,8 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
 
     try {
       const formData = new FormData();
-      formData.append('images', files[0]); // Only upload first file for main image
-      formData.append('color', 'main'); // Use 'main' as identifier for main image
-
+      formData.append('images', files[0]); 
+      formData.append('color', 'main'); 
 
       const result = await mutateAsync(formData);
       const uploadedUrls = Array.isArray(result) ? result :
@@ -171,8 +173,6 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
       });
       formData.append('color', colorData.colorName.trim());
 
-
-
       const result = await mutateAsync(formData);
       const uploadedUrls = Array.isArray(result) ? result :
         result.urls ? result.urls : [];
@@ -209,14 +209,9 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
       setSelectedTags(prev => [...prev, { label: createdTag.name, value: createdTag._id || '' }])
       setValue('tags', [...selectedTags.map(s => s.value), createdTag._id]);
     }
-
   }
 
   const onSubmit = async (data: ProductFormData) => {
-    console.log('Form data:', data);
-    console.log('Colors data:', colors);
-
-    // Validate that we have at least one color with images
     const validColors = colors.filter(color => color.colorName.trim() && color.urls.length > 0);
 
     if (validColors.length === 0) {
@@ -224,14 +219,12 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
       return;
     }
 
-    // Transform colors to match ColorData[] type (not Partial<ColorData[]>)
     const transformedColors: ColorData[] = validColors.map(color => ({
       color: color.colorName.trim(),
       urls: color.urls,
-      availableSize: color.availableSize.length > 0 ? color.availableSize : data.sizes, // Use product sizes if color-specific sizes are not provided
+      availableSize: color.availableSize.length > 0 ? color.availableSize : data.sizes,
     }));
 
-    // Create product data matching Product<false> interface
     const productData: Product<false> = {
       name: data.name,
       image: data.image,
@@ -242,11 +235,9 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
       companyId: data.companyId,
       sizes: data.sizes,
       inStock: data.inStock,
-      tags: data.tags || [], // Convert undefined to empty array
-      colors: transformedColors, // This should be ColorData[], not Partial<ColorData[]>
+      tags: data.tags || [],
+      colors: transformedColors,
     };
-
-    console.log("🪵 ~ onSubmit ~ productData:", productData);
 
     try {
       mutate(productData);
@@ -256,316 +247,425 @@ export function AddProductForm({ onSuccess }: AddProductFormProps) {
     }
   };
 
-  return (
-    <div className="max-w-4xl mx-auto">
-      <Card className="border-0 shadow-lg bg-white">
-        <CardHeader className="pb-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-t-lg">
-          <CardTitle className="text-2xl font-bold text-gray-900">Add New Product</CardTitle>
-          <p className="text-gray-600 mt-1">Create a new product with multiple color variants</p>
+ return (
+    <div className="max-w-full mx-auto">
+      <Card className="border-0 shadow-2xl bg-white">
+        <CardHeader className="pb-6 bg-black text-white rounded-t-lg">
+          <CardTitle className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-white`}>
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-white/20 rounded-full">
+                <Package className={`${isMobile ? 'h-5 w-5' : 'h-6 w-6'}`} />
+              </div>
+              <div>
+                <span>Create New Product</span>
+              </div>
+            </div>
+          </CardTitle>
         </CardHeader>
-        <CardContent className="p-8">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+        <CardContent className={`${isMobile ? 'p-4' : 'p-8'}`}>
+          <form onSubmit={handleSubmit(onSubmit)} className={`space-y-${isMobile ? '6' : '8'}`}>
             {/* Basic Product Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Label>Product Name</Label>
-                <Input {...register('name')} placeholder="Enter product name" />
-                {errors.name && <p className="text-red-500 text-xs">{errors.name.message}</p>}
-              </div>
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+              <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center">
+                <Package className="h-5 w-5 mr-2" />
+                Basic Information
+              </h3>
+              <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'} gap-6`}>
+                <div>
+                  <Label className="text-gray-700 font-medium">Product Name</Label>
+                  <Input 
+                    {...register('name')} 
+                    placeholder="Enter product name" 
+                    className="mt-2 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  />
+                  {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
+                </div>
 
-              <div>
-                <Label>Article Number</Label>
-                <Input {...register('articleNo')} placeholder="Enter article number" />
-                {errors.articleNo && <p className="text-red-500 text-xs">{errors.articleNo.message}</p>}
-              </div>
+                <div>
+                  <Label className="text-gray-700 font-medium">Article Number</Label>
+                  <Input 
+                    {...register('articleNo')} 
+                    placeholder="Enter article number" 
+                    className="mt-2 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  />
+                  {errors.articleNo && <p className="text-red-500 text-xs mt-1">{errors.articleNo.message}</p>}
+                </div>
 
-              <div className="md:col-span-2">
-                <Label>Main Product Image</Label>
-                <div className="space-y-2">
-                  <label
-                    className={`block w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-gray-400 transition-colors ${isUploadingMainImage ? 'opacity-50 cursor-not-allowed' : ''
+                <div className={`${isMobile ? 'col-span-1' : 'md:col-span-2'}`}>
+                  <Label className="text-gray-700 font-medium">Main Product Image</Label>
+                  <div className="mt-2">
+                    <label
+                      className={`block w-full border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 ${
+                        isUploadingMainImage ? 'opacity-50 cursor-not-allowed' : ''
                       }`}
-                  >
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      disabled={isUploadingMainImage}
-                      onChange={(e) => {
-                        if (e.target.files) {
-                          uploadMainImage(e.target.files);
-                          e.target.value = '';
-                        }
-                      }}
-                    />
-                    <div className="flex flex-col items-center space-y-2">
-                      <ImageIcon className="h-8 w-8 text-gray-400" />
-                      <span className="text-sm text-gray-600">
-                        {isUploadingMainImage ? 'Uploading...' : 'Upload Main Product Image'}
-                      </span>
-                    </div>
-                  </label>
-
-                  {mainImageUrl && (
-                    <div className="flex items-center space-x-3">
-                      <img
-                        src={mainImageUrl}
-                        alt="Main product"
-                        className="w-20 h-20 object-cover rounded border"
+                    >
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={isUploadingMainImage}
+                        onChange={(e) => {
+                          if (e.target.files) {
+                            uploadMainImage(e.target.files);
+                            e.target.value = '';
+                          }
+                        }}
                       />
-                      <div className="flex-1">
-                        <div className="text-green-600 flex items-center space-x-1">
-                          <Check className="w-4 h-4" />
-                          <span className="text-sm">Main image uploaded successfully</span>
+                      <div className="flex flex-col items-center space-y-3">
+                        <div className="p-3 bg-blue-100 rounded-full">
+                          <ImageIcon className="h-8 w-8 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {isUploadingMainImage ? 'Uploading...' : 'Upload Main Product Image'}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">PNG, JPG up to 10MB</p>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMainImageUrl('');
-                          setValue('image', '');
-                        }}
-                        className="text-red-500 hover:text-red-700 p-1"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-                {errors.image && <p className="text-red-500 text-xs">{errors.image.message}</p>}
-              </div>
+                    </label>
 
-              <div className="md:col-span-2">
-                <Label>Description</Label>
-                <textarea
-                  {...register('description')}
-                  placeholder="Enter product description (minimum 10 characters)"
-                  className="w-full p-3 border border-gray-300 rounded-md resize-y min-h-[100px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows={4}
-                />
-                {errors.description && <p className="text-red-500 text-xs">{errors.description.message}</p>}
-              </div>
-
-              <div>
-                <Label>Price (₹)</Label>
-                <Input type="number" step="0.01" {...register('price', { valueAsNumber: true })} placeholder="0.00" />
-                {errors.price && <p className="text-red-500 text-xs">{errors.price.message}</p>}
-              </div>
-
-              <div>
-                <Label>Category</Label>
-                <Select onValueChange={(value) => setValue('categoryId', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories?.map((category) => (
-                      <SelectItem key={category._id} value={category._id || ''}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.categoryId && <p className="text-red-500 text-xs">{errors.categoryId.message}</p>}
-              </div>
-
-              <div>
-                <Label>Company</Label>
-                <Select onValueChange={(value) => setValue('companyId', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Company" />
-                  </SelectTrigger><SelectContent>
-                    {companies?.map((c) => (
-                      <SelectItem
-                        key={c._id}
-                        value={c._id || ""}
-                        className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                      >
-                        <div className="flex items-center gap-2">
-                          <img
-                            src={c.logo}
-                            alt={c.name}
-                            className="w-6 h-6 rounded-full object-cover border border-gray-300"
-                          />
-                          <span className="truncate">{c.name}</span>
+                    {mainImageUrl && (
+                      <div className="flex items-center space-x-4 mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                        <img
+                          src={mainImageUrl}
+                          alt="Main product"
+                          className="w-16 h-16 object-cover rounded-lg border-2 border-green-300"
+                        />
+                        <div className="flex-1">
+                          <div className="text-green-700 flex items-center space-x-2">
+                            <Check className="w-4 h-4" />
+                            <span className="text-sm font-medium">Main image uploaded successfully</span>
+                          </div>
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMainImageUrl('');
+                            setValue('image', '');
+                          }}
+                          className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-full transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {errors.image && <p className="text-red-500 text-xs mt-1">{errors.image.message}</p>}
+                </div>
 
-                </Select>
+                <div className={`${isMobile ? 'col-span-1' : 'md:col-span-2'}`}>
+                  <Label className="text-gray-700 font-medium">Description</Label>
+                  <textarea
+                    {...register('description')}
+                    placeholder="Enter product description (minimum 10 characters)"
+                    className="w-full mt-2 p-4 border border-gray-300 rounded-lg resize-y min-h-[120px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={4}
+                  />
+                  {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
+                </div>
               </div>
+            </div>
 
-              <div>
-                <Label>Sizes (comma separated)</Label>
-                <Input
-                  placeholder="S, M, L"
-                  onChange={(e) => {
-                    const sizes = e.target.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
-                    setValue('sizes', sizes);
-                  }}
-                />
-                {errors.sizes && <p className="text-red-500 text-xs">{errors.sizes.message}</p>}
-              </div>
+            {/* Product Details */}
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-200">
+              <h3 className="text-lg font-semibold text-emerald-900 mb-4 flex items-center">
+                <IndianRupee className="h-5 w-5 mr-2" />
+                Product Details
+              </h3>
+              <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'} gap-6`}>
+                <div>
+                  <Label className="text-gray-700 font-medium">Price (₹)</Label>
+                  <Input 
+                    type="number" 
+                    step="0.01" 
+                    {...register('price', { valueAsNumber: true })} 
+                    placeholder="0.00" 
+                    className="mt-2 border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
+                  />
+                  {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price.message}</p>}
+                </div>
 
-              <div>
-                <Label>In Stock</Label>
-                <Select onValueChange={(value) => setValue('inStock', value === 'true')}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select stock status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="true">Yes</SelectItem>
-                    <SelectItem value="false">No</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                <div>
+                  <Label className="text-gray-700 font-medium">Category</Label>
+                  <Select onValueChange={(value) => setValue('categoryId', value)}>
+                    <SelectTrigger className="mt-2 border-gray-300 focus:border-emerald-500 focus:ring-emerald-500">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories?.map((category) => (
+                        <SelectItem key={category._id} value={category._id || ''}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.categoryId && <p className="text-red-500 text-xs mt-1">{errors.categoryId.message}</p>}
+                </div>
 
-              <div>
-                <Label>Tags</Label>
-                <CreatableSelect
-                  isMulti
-                  value={selectedTags}
-                  onChange={(newValue: any) => {
-                    const tags = newValue || [];
-                    setSelectedTags(tags);
-                    setValue('tags', tags.map((v: any) => v.value));
-                  }}
-                  options={tagsOptions}
-                  onCreateOption={(inputValue: string) => handleCreateTag(inputValue)}
-                  placeholder="Add tags..."
-                />
-                {errors.tags && <p className="text-red-500 text-xs">{errors.tags.message}</p>}
+                <div>
+                  <Label className="text-gray-700 font-medium">Company</Label>
+                  <Select onValueChange={(value) => setValue('companyId', value)}>
+                    <SelectTrigger className="mt-2 border-gray-300 focus:border-emerald-500 focus:ring-emerald-500">
+                      <SelectValue placeholder="Select Company" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies?.map((c) => (
+                        <SelectItem
+                          key={c._id}
+                          value={c._id || ""}
+                          className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            <img
+                              src={c.logo}
+                              alt={c.name}
+                              className="w-6 h-6 rounded-full object-cover border border-gray-300"
+                            />
+                            <span className="truncate">{c.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.companyId && <p className="text-red-500 text-xs mt-1">{errors.companyId.message}</p>}
+                </div>
+
+                <div>
+                  <Label className="text-gray-700 font-medium">Sizes (comma separated)</Label>
+                  <Input
+                    placeholder="S, M, L, XL"
+                    className="mt-2 border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
+                    onChange={(e) => {
+                      const sizes = e.target.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                      setValue('sizes', sizes);
+                    }}
+                  />
+                  {errors.sizes && <p className="text-red-500 text-xs mt-1">{errors.sizes.message}</p>}
+                </div>
+
+                <div>
+                  <Label className="text-gray-700 font-medium">In Stock</Label>
+                  <Select onValueChange={(value) => setValue('inStock', value === 'true')}>
+                    <SelectTrigger className="mt-2 border-gray-300 focus:border-emerald-500 focus:ring-emerald-500">
+                      <SelectValue placeholder="Select stock status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">✅ Yes</SelectItem>
+                      <SelectItem value="false">❌ No</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className={`${isMobile ? 'col-span-1' : 'md:col-span-2'}`}>
+                  <Label className="text-gray-700 font-medium">Tags</Label>
+                  <div className="mt-2">
+                    <CreatableSelect
+                      isMulti
+                      value={selectedTags}
+                      onChange={(newValue: any) => {
+                        const tags = newValue || [];
+                        setSelectedTags(tags);
+                        setValue('tags', tags.map((v: any) => v.value));
+                      }}
+                      options={tagsOptions}
+                      onCreateOption={(inputValue: string) => handleCreateTag(inputValue)}
+                      placeholder="Add tags..."
+                      className="react-select-container"
+                      classNamePrefix="react-select"
+                      styles={{
+                        control: (provided) => ({
+                          ...provided,
+                          borderColor: '#d1d5db',
+                          '&:hover': {
+                            borderColor: '#10b981'
+                          },
+                          '&:focus-within': {
+                            borderColor: '#10b981',
+                            boxShadow: '0 0 0 1px #10b981'
+                          }
+                        })
+                      }}
+                    />
+                  </div>
+                  {errors.tags && <p className="text-red-500 text-xs mt-1">{errors.tags.message}</p>}
+                </div>
               </div>
             </div>
 
             {/* Divider */}
-            <div className="border-t border-gray-200"></div>
+            <div className="flex items-center">
+              <div className="flex-1 border-t border-gray-200"></div>
+              <div className="px-4 text-sm font-medium text-gray-500">Product Images</div>
+              <div className="flex-1 border-t border-gray-200"></div>
+            </div>
 
             {/* Product Images Section */}
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
+            <div className=" rounded-xl p-6 border ">
+              <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="text-lg font-semibold">Product Images</h3>
-                  <p className="text-sm text-gray-600">Add images for each color variant</p>
+                  <h3 className="text-lg font-semibold flex items-center">
+                    Color Variants & Images
+                  </h3>
+                  {!isMobile && (
+                           <p className={` ${isMobile ? 'text-xs' : 'text-sm'} mt-1`}>
+                    Add images for each color variant of your product
+                  </p>
+                  )}
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={addColorSection}>
-                  <Plus className="h-4 w-4" /> Add Color
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size={isMobile ? "sm" : "default"}
+                  onClick={addColorSection}
+                  className="flex justify-center items-center"
+                >
+                  <Plus className="h-4 w-4" />
+                 {!isMobile &&   <span className='ml-2'>Add Color</span> }
                 </Button>
               </div>
 
-              {colors.map((colorData) => (
-                <Card key={colorData.id} className="border">
-                  <CardContent className="p-6 space-y-4">
-                    <div className="flex items-start space-x-4">
-                      <div className="flex-1">
-                        <Label>Color Name</Label>
-                        <Input
-                          value={colorData.colorName}
-                          onChange={(e) => updateColorName(colorData.id, e.target.value)}
-                          placeholder="e.g., Midnight Black"
-                        />
+              <div className="space-y-6">
+                {colors.map((colorData, index) => (
+                  <Card key={colorData.id} className=" bg-white/80 backdrop-blur-sm">
+                    <CardHeader className="">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold flex items-center`}>
+                              <Palette className="h-5 w-5 mr-2" />
+                          Color Variant #{index + 1}
+                        </CardTitle>
+                        {colors.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeColorSection(colorData.id)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
-                      {colors.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeColorSection(colorData.id)}
-                          className="mt-6 text-red-500"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
+                    </CardHeader>
+                    <CardContent className={`${isMobile ? 'p-4' : 'p-6'} space-y-4`}>
+                      <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'} gap-4`}>
+                        <div>
+                          <Label className="text-gray-700 font-medium">Color Name</Label>
+                          <Input
+                            value={colorData.colorName}
+                            onChange={(e) => updateColorName(colorData.id, e.target.value)}
+                            placeholder="e.g., Midnight Black, Ocean Blue"
+                            className="mt-2 border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                          />
+                        </div>
 
-                    <div>
-                      <Label>Available Sizes (optional - defaults to product sizes)</Label>
-                      <Input
-                        value={colorData.availableSize.join(', ')}
-                        onChange={(e) => updateAvailableSizes(colorData.id, e.target.value)}
-                        placeholder="S, M, L (leave empty to use product sizes)"
-                      />
-                    </div>
+                        <div>
+                          <Label className="text-gray-700 font-medium">Available Sizes (optional)</Label>
+                          <Input
+                            value={colorData.availableSize.join(', ')}
+                            onChange={(e) => updateAvailableSizes(colorData.id, e.target.value)}
+                            placeholder="S, M, L (leave empty to use product sizes)"
+                            className="mt-2 border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">Leave empty to use general product sizes</p>
+                        </div>
+                      </div>
 
-                    <div className="flex items-center space-x-4">
-                      <label
-                        className={`flex-1 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-gray-400 transition-colors ${colorData.isUploading ? 'opacity-50 cursor-not-allowed' : ''
-                          } ${!colorData.colorName.trim() ? 'opacity-50 cursor-not-allowed' : ''
+                      {/* Image Upload Section */}
+                      <div className="space-y-4">
+                        <label
+                          className={`flex-1 border-2 border-dashed border-purple-300 rounded-lg p-6 text-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-all duration-200 ${
+                            colorData.isUploading ? 'opacity-50 cursor-not-allowed' : ''
+                          } ${
+                            !colorData.colorName.trim() ? 'opacity-50 cursor-not-allowed' : ''
                           }`}
-                      >
-                        <input
-                          type="file"
-                          multiple
-                          accept="image/*"
-                          className="hidden"
-                          disabled={colorData.isUploading || !colorData.colorName.trim()}
-                          onChange={(e) => {
-                            if (e.target.files) {
-                              uploadImages(colorData.id, e.target.files);
-                              e.target.value = '';
-                            }
-                          }}
-                        />
-                        <div className="flex flex-col items-center space-y-2">
-                          <Upload className="h-8 w-8 text-gray-400" />
-                          <span className="text-sm text-gray-600">
-                            {colorData.isUploading ? 'Uploading...' : 'Upload Images'}
-                          </span>
-                        </div>
-                      </label>
-
-                      {colorData.urls.length > 0 && (
-                        <div className="text-green-600 flex items-center space-x-1">
-                          <Check className="w-4 h-4" />
-                          <span className="text-sm">{colorData.urls.length} uploaded</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {colorData.urls.length > 0 && (
-                      <div className="grid grid-cols-6 gap-2">
-                        {colorData.urls.map((url, idx) => (
-                          <div key={idx} className="relative group">
-                            <img
-                              src={url}
-                              alt={`${colorData.colorName} ${idx + 1}`}
-                              className="w-full h-16 object-cover rounded border"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeImage(colorData.id, idx)}
-                              className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
+                        >
+                          <input
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            className="hidden"
+                            disabled={colorData.isUploading || !colorData.colorName.trim()}
+                            onChange={(e) => {
+                              if (e.target.files) {
+                                uploadImages(colorData.id, e.target.files);
+                                e.target.value = '';
+                              }
+                            }}
+                          />
+                          <div className="flex flex-col items-center space-y-3">
+                            <div className="p-3 bg-purple-100 rounded-full">
+                              <Upload className="h-6 w-6 text-purple-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">
+                                {colorData.isUploading ? 'Uploading Images...' : 'Upload Color Images'}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {!colorData.colorName.trim() ? 'Enter color name first' : 'Select multiple images for this color'}
+                              </p>
+                            </div>
+                            {colorData.isUploading && (
+                              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+                            )}
                           </div>
-                        ))}
+                        </label>
+
+                        {colorData.urls.length > 0 && (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className="text-green-600 flex items-center space-x-2">
+                                <Check className="w-4 h-4" />
+                                <span className="text-sm font-medium">{colorData.urls.length} images uploaded</span>
+                              </div>
+                            </div>
+                            <div className={`grid ${isMobile ? 'grid-cols-3' : 'grid-cols-6'} gap-3`}>
+                              {colorData.urls.map((url, idx) => (
+                                <div key={idx} className="relative group">
+                                  <img
+                                    src={url}
+                                    alt={`${colorData.colorName} ${idx + 1}`}
+                                    className="w-full h-20 object-cover rounded-lg border-2 border-purple-200 shadow-sm"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => removeImage(colorData.id, idx)}
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
 
+            {/* Submit Button */}
             <div className="pt-6">
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full"
+                className={`w-full ${isMobile ? 'h-12' : 'h-14'} bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200`}
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
                     Creating Product...
                   </>
                 ) : (
-                  'Create Product'
+                  <>
+                    <Package className="w-5 h-5 mr-2" />
+                    Create Product
+                  </>
                 )}
               </Button>
             </div>
           </form>
-
         </CardContent>
       </Card>
     </div>

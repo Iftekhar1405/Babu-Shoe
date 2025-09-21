@@ -24,9 +24,9 @@ export function LoginForm() {
     const newErrors: Record<string, string> = {};
 
     if (!formData.phoneNumber) {
-      newErrors.phoneNumber = 'Phone number is required';
-    } else if (!/^\+?[\d\s-()]+$/.test(formData.phoneNumber)) {
-      newErrors.phoneNumber = 'Please enter a valid phone number';
+      newErrors.phoneNumber = "Mobile number is required";
+    } else if (!/^\+91\d{10}$/.test(formData.phoneNumber)) {
+      newErrors.phoneNumber = "Please enter a valid 10 digit mobile number";
     }
 
     if (!formData.password) {
@@ -43,7 +43,7 @@ export function LoginForm() {
     e.preventDefault();
 
     if (!validateForm()) return;
-
+    console.log("🪵 ~ handleSubmit ~ formData:", formData)
     loginMutation.mutate(formData);
   };
 
@@ -68,16 +68,20 @@ export function LoginForm() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Phone Number Field */}
             <div className="space-y-2">
-              <Label htmlFor="phoneNumber">Phone Number</Label>
+              <Label htmlFor="phoneNumber">Mobile Number</Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
                   id="phoneNumber"
                   type="tel"
-                  placeholder="+91 98765 43210"
-                  value={formData.phoneNumber}
-                  onChange={(e) => handleChange('phoneNumber', e.target.value)}
-                  className={`pl-10 ${errors.phoneNumber ? 'border-red-500' : ''}`}
+                  placeholder="9876543210"
+                  maxLength={10}
+                  value={formData.phoneNumber.replace("+91", "")} // display only 10 digits
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, ""); // allow only digits
+                    handleChange("phoneNumber", value ? `+91${value}` : "");
+                  }}
+                  className={`pl-10 ${errors.phoneNumber ? "border-red-500" : ""}`}
                   disabled={loginMutation.isPending}
                 />
               </div>
