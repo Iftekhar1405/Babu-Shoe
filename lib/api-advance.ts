@@ -42,7 +42,7 @@ interface Bill {
 }
 import { authQueryKeys } from "./auth-hooks";
 import { CreatePayment, RazorpayOrderResponse, verifyPayment } from "@/types/payment.types";
-import { IncomingOrder, CreateIncomingOrderDto, UpdateIncomingOrderDto, IncomingOrderComment } from "@/types";
+import { IncomingOrder, CreateIncomingOrderDto, UpdateIncomingOrderDto, IncomingOrderComment, Transaction, CreateTransactionDto, ReverseTransactionDto, TransactionFilters, PaginatedTransactionResponse, Customer, CreateCustomerDto, UpdateCustomerDto, CustomerFilters, PaginatedCustomerResponse, TransactionType } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL as string;
 
@@ -89,6 +89,17 @@ export const queryKeys = {
   incomingOrders: () => [...queryKeys.all, "incoming-orders"] as const,
   incomingOrder: (id: string) => [...queryKeys.incomingOrders(), id] as const,
   incomingOrdersList: (filters?: any) => [...queryKeys.incomingOrders(), "list", filters] as const,
+
+  // Transactions
+  transactions: () => [...queryKeys.all, "transactions"] as const,
+  transaction: (id: string) => [...queryKeys.transactions(), id] as const,
+  transactionsList: (filters?: TransactionFilters) => [...queryKeys.transactions(), "list", filters] as const,
+  customerLedger: (customerId: string) => [...queryKeys.transactions(), "customer", customerId, "ledger"] as const,
+
+  // Customers
+  customers: () => [...queryKeys.all, "customers"] as const,
+  customer: (id: string) => [...queryKeys.customers(), id] as const,
+  customersList: (filters?: CustomerFilters) => [...queryKeys.customers(), "list", filters] as const,
 
 } as const;
 
@@ -537,6 +548,88 @@ class ApiClient {
   // Remove the dedicated comment endpoint method since it might not exist
   // Comments will be handled through the update endpoint
 
+  // Transactions
+  async getTransactions(filters?: TransactionFilters): Promise<PaginatedTransactionResponse> {
+    const params = new URLSearchParams();
+    if (filters?.page) params.append("page", filters.page.toString());
+    if (filters?.limit) params.append("limit", filters.limit.toString());
+    if (filters?.customerId) params.append("customerId", filters.customerId);
+    if (filters?.type) params.append("type", filters.type);
+    if (filters?.startDate) params.append("startDate", filters.startDate);
+    if (filters?.endDate) params.append("endDate", filters.endDate);
+
+    const endpoint = `/transactions${params.toString() ? `?${params.toString()}` : ""}`;
+    const response = await this.request<PaginatedTransactionResponse, false>(endpoint);
+    return response;
+  }
+
+  async getCustomerLedger(customerId: string, limit = 100): Promise<Transaction[]> {
+    const response = await this.request<Transaction[], false>(`/transactions/customer/${customerId}/ledger?limit=${limit}`);
+    return response;
+  }
+
+  async createTransaction(transactionData: CreateTransactionDto): Promise<Transaction> {
+    const response = await this.request<Transaction>("/transactions", {
+      method: "POST",
+      body: JSON.stringify(transactionData),
+    });
+    return response.data;
+  }
+
+  async reverseTransaction(reverseData: ReverseTransactionDto): Promise<Transaction> {
+    const response = await this.request<Transaction>("/transactions/reverse", {
+      method: "POST",
+      body: JSON.stringify(reverseData),
+    });
+    return response.data;
+  }
+
+  async reconcileCustomerBalance(customerId: string): Promise<{ success: boolean; message: string }> {
+    const response = await this.request<{ success: boolean; message: string }>(`/transactions/customer/${customerId}/reconcile`, {
+      method: "POST",
+    });
+    return response.data;
+  }
+
+  // Customers
+  async getCustomers(filters?: CustomerFilters): Promise<PaginatedCustomerResponse> {
+    const params = new URLSearchParams();
+    if (filters?.page) params.append("page", filters.page.toString());
+    if (filters?.limit) params.append("limit", filters.limit.toString());
+    if (filters?.search) params.append("search", filters.search);
+
+    const endpoint = `/customers${params.toString() ? `?${params.toString()}` : ""}`;
+    const response = await this.request<PaginatedCustomerResponse, false>(endpoint);
+    return response;
+  }
+
+  async getCustomerById(id: string): Promise<Customer> {
+    const response = await this.request<Customer>(`/customers/${id}`);
+    return response.data;
+  }
+
+  async createCustomer(customerData: CreateCustomerDto): Promise<Customer> {
+    const response = await this.request<Customer>("/customers", {
+      method: "POST",
+      body: JSON.stringify(customerData),
+    });
+    return response.data;
+  }
+
+  async updateCustomer(id: string, customerData: UpdateCustomerDto): Promise<Customer> {
+    const response = await this.request<Customer>(`/customers/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(customerData),
+    });
+    return response.data;
+  }
+
+  async deleteCustomer(id: string): Promise<void> {
+    await this.request<void>(`/customers/${id}`, {
+      method: "DELETE",
+    });
+  }
+
 }
 
 
@@ -583,6 +676,75 @@ export const useIncomingOrder = <TData = IncomingOrder>(
     enabled: !!id,
     staleTime: 30 * 1000, // 30 seconds
     gcTime: 2 * 60 * 1000, // 2 minutes
+    ...options,
+  });
+};
+
+// Transaction Queries
+export const useTransactions = <TData = PaginatedTransactionResponse>(
+  filters?: TransactionFilters,
+  options?: Omit<
+    UseQueryOptions<PaginatedTransactionResponse, ApiError, TData>,
+    "queryKey" | "queryFn"
+  >
+) => {
+  return useQuery({
+    queryKey: queryKeys.transactionsList(filters),
+    queryFn: () => apiClient.getTransactions(filters),
+    staleTime: 30 * 1000, // 30 seconds
+    gcTime: 2 * 60 * 1000, // 2 minutes
+    ...options,
+  });
+};
+
+export const useCustomerLedger = <TData = Transaction[]>(
+  customerId: string | undefined,
+  limit = 100,
+  options?: Omit<
+    UseQueryOptions<Transaction[], ApiError, TData>,
+    "queryKey" | "queryFn"
+  >
+) => {
+  return useQuery({
+    queryKey: queryKeys.customerLedger(customerId || ""),
+    queryFn: () => apiClient.getCustomerLedger(customerId || "", limit),
+    enabled: !!customerId,
+    staleTime: 30 * 1000, // 30 seconds
+    gcTime: 2 * 60 * 1000, // 2 minutes
+    ...options,
+  });
+};
+
+// Customer Queries
+export const useCustomers = <TData = PaginatedCustomerResponse>(
+  filters?: CustomerFilters,
+  options?: Omit<
+    UseQueryOptions<PaginatedCustomerResponse, ApiError, TData>,
+    "queryKey" | "queryFn"
+  >
+) => {
+  return useQuery({
+    queryKey: queryKeys.customersList(filters),
+    queryFn: () => apiClient.getCustomers(filters),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    ...options,
+  });
+};
+
+export const useCustomer = <TData = Customer>(
+  id: string | undefined,
+  options?: Omit<
+    UseQueryOptions<Customer, ApiError, TData>,
+    "queryKey" | "queryFn"
+  >
+) => {
+  return useQuery({
+    queryKey: queryKeys.customer(id || ""),
+    queryFn: () => apiClient.getCustomerById(id || ""),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     ...options,
   });
 };
@@ -1064,6 +1226,157 @@ export const useAddIncomingOrderComment = (
   });
 };
 
+// Transaction Mutations
+export const useCreateTransaction = (
+  options?: UseMutationOptions<Transaction, ApiError, CreateTransactionDto>
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (transactionData: CreateTransactionDto) =>
+      apiClient.createTransaction(transactionData),
+    onSuccess: (newTransaction) => {
+      // Invalidate transaction lists
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactions() });
+
+      // Invalidate customer ledger
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.customerLedger(newTransaction.customerId)
+      });
+
+      // Invalidate customers to update balance
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers() });
+    },
+    onError: (error) => {
+      console.error("Failed to create transaction:", error);
+    },
+    ...options,
+  });
+};
+
+export const useReverseTransaction = (
+  options?: UseMutationOptions<Transaction, ApiError, ReverseTransactionDto>
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (reverseData: ReverseTransactionDto) =>
+      apiClient.reverseTransaction(reverseData),
+    onSuccess: (reversedTransaction) => {
+      // Invalidate all transaction-related queries
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactions() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customerLedger(reversedTransaction.customerId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers() });
+    },
+    onError: (error) => {
+      console.error("Failed to reverse transaction:", error);
+    },
+    ...options,
+  });
+};
+
+export const useReconcileCustomerBalance = (
+  options?: UseMutationOptions<{ success: boolean; message: string }, ApiError, string>
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (customerId: string) => apiClient.reconcileCustomerBalance(customerId),
+    onSuccess: (_, customerId) => {
+      // Invalidate customer ledger and customers
+      queryClient.invalidateQueries({ queryKey: queryKeys.customerLedger(customerId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers() });
+    },
+    onError: (error) => {
+      console.error("Failed to reconcile customer balance:", error);
+    },
+    ...options,
+  });
+};
+
+// Customer Mutations
+export const useCreateCustomer = (
+  options?: UseMutationOptions<Customer, ApiError, CreateCustomerDto>
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (customerData: CreateCustomerDto) =>
+      apiClient.createCustomer(customerData),
+    onSuccess: (newCustomer) => {
+      // Invalidate customers list
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers() });
+
+      // Set the new customer in cache
+      queryClient.setQueryData(queryKeys.customer(newCustomer._id || ""), newCustomer);
+    },
+    onError: (error) => {
+      console.error("Failed to create customer:", error);
+    },
+    ...options,
+  });
+};
+
+export const useUpdateCustomer = (
+  options?: UseMutationOptions<
+    Customer,
+    ApiError,
+    { id: string; data: UpdateCustomerDto }
+  >
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }) => apiClient.updateCustomer(id, data),
+    onSuccess: (updatedCustomer, { id }) => {
+      // Update the specific customer in cache
+      queryClient.setQueryData(queryKeys.customer(id), updatedCustomer);
+
+      // Update the customer in the customers list
+      queryClient.setQueryData<PaginatedCustomerResponse>(queryKeys.customers(), (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: old.data.map((customer) =>
+            customer._id === id ? updatedCustomer : customer
+          ),
+        };
+      });
+    },
+    onError: (error) => {
+      console.error("Failed to update customer:", error);
+    },
+    ...options,
+  });
+};
+
+export const useDeleteCustomer = (
+  options?: UseMutationOptions<void, ApiError, string>
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => apiClient.deleteCustomer(id),
+    onSuccess: (_, deletedId) => {
+      // Remove from customers list
+      queryClient.setQueryData<PaginatedCustomerResponse>(queryKeys.customers(), (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: old.data.filter((customer) => customer._id !== deletedId),
+        };
+      });
+
+      // Remove the specific customer query
+      queryClient.removeQueries({ queryKey: queryKeys.customer(deletedId) });
+    },
+    onError: (error) => {
+      console.error("Failed to delete customer:", error);
+    },
+    ...options,
+  });
+};
+
 export const useUploadImagesLegacy = (
   options?: UseMutationOptions<{ urls: string[] }, ApiError, FormData>
 ) => {
@@ -1484,6 +1797,14 @@ export const useOptimisticBillUpdates = () => {
     },
   };
 };
+
+// Utility function for generating idempotency keys
+export function makeIdempotencyKey(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return (crypto as any).randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+}
 
 export const queryClient = new QueryClient({
   defaultOptions: {

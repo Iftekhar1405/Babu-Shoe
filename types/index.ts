@@ -7,14 +7,34 @@ export { Role, type AuthResponse, type AuthState, type LoginData, type RegisterD
 export { MessageType, SearchStatus, type ChatMessage, type SearchState, type AIProductSearchProps } from './chat';
 
 // Re-export vendor types for convenience
-export { 
-  type Vendor, 
-  type CreateVendorDto, 
-  type UpdateVendorDto, 
-  type VendorFilters, 
-  type PaginatedVendorResponse, 
-  type ContactPerson 
+export {
+  type Vendor,
+  type CreateVendorDto,
+  type UpdateVendorDto,
+  type VendorFilters,
+  type PaginatedVendorResponse,
+  type ContactPerson
 } from './vendor.types';
+
+// Re-export transaction types for convenience
+export {
+  TransactionType,
+  type Transaction,
+  type CreateTransactionDto,
+  type ReverseTransactionDto,
+  type TransactionFilters,
+  type PaginatedTransactionResponse,
+  type ObjectId
+} from './transaction.type';
+
+// Re-export customer types for convenience
+export {
+  type Customer,
+  type CreateCustomerDto,
+  type UpdateCustomerDto,
+  type CustomerFilters,
+  type PaginatedCustomerResponse
+} from './customer.type';
 
 export interface Category {
   _id?: string;

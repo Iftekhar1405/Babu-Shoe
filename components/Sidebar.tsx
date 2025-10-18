@@ -28,7 +28,8 @@ import {
   LogIn,
   BrainCircuit,
   Package2,
-  Building
+  Building,
+  Coins
 } from 'lucide-react';
 import { DETAILS } from '@/public/details';
 import { useAuth } from '@/lib/auth-hooks';
@@ -99,6 +100,12 @@ const navigation = [
     name: 'Vendors',
     href: '/vendors',
     icon: Building,
+    public: false,
+  },
+  {
+    name: 'Transactions',
+    href: '/transactions',
+    icon: Coins,
     public: false,
   },
 ];

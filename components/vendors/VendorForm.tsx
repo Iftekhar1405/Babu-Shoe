@@ -43,7 +43,7 @@ interface VendorFormData {
 
 export function VendorForm({ vendor, onSuccess, onCancel, mode = 'create' }: VendorFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const createVendorMutation = useCreateVendor();
   const updateVendorMutation = useUpdateVendor();
 
@@ -67,7 +67,7 @@ export function VendorForm({ vendor, onSuccess, onCancel, mode = 'create' }: Ven
     remove: removeContact,
   } = useFieldArray({
     control: form.control,
-    name: 'contact',
+    name: 'contactPersons',
   });
 
   const {
@@ -91,14 +91,14 @@ export function VendorForm({ vendor, onSuccess, onCancel, mode = 'create' }: Ven
 
   const onSubmit = async (data: VendorFormData) => {
     setIsSubmitting(true);
-    
+
     try {
       // Validate contact information
       const allContacts = [
         ...data.contact,
         ...data.contactPersons.flatMap(person => person.contacts)
       ];
-      
+
       for (const contact of allContacts) {
         if (contact && !validatePhone(contact) && !validateEmail(contact)) {
           toast.error('Please enter valid phone numbers or email addresses');
@@ -125,7 +125,7 @@ export function VendorForm({ vendor, onSuccess, onCancel, mode = 'create' }: Ven
       };
 
       let result: Vendor;
-      
+
       if (mode === 'edit' && vendor?._id) {
         result = await updateVendorMutation.mutateAsync({
           id: vendor._id,
@@ -138,7 +138,7 @@ export function VendorForm({ vendor, onSuccess, onCancel, mode = 'create' }: Ven
       }
 
       onSuccess?.(result);
-      
+
       if (mode === 'create') {
         form.reset();
       }
@@ -151,7 +151,7 @@ export function VendorForm({ vendor, onSuccess, onCancel, mode = 'create' }: Ven
   };
 
   const addContactField = () => {
-    appendContact('');
+    appendContact({ name: '', contacts: [] });
   };
 
   const removeContactField = (index: number) => {
@@ -184,7 +184,7 @@ export function VendorForm({ vendor, onSuccess, onCancel, mode = 'create' }: Ven
             {/* Basic Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Basic Information</h3>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -402,7 +402,7 @@ export function VendorForm({ vendor, onSuccess, onCancel, mode = 'create' }: Ven
                 <FormField
                   control={form.control}
                   name="pincode"
-                  rules={{ 
+                  rules={{
                     required: 'Pincode is required',
                     pattern: {
                       value: /^[1-9][0-9]{5}$/,
@@ -456,7 +456,7 @@ function ContactPersonContacts({ form, personIndex }: { form: any; personIndex: 
   });
 
   const addContactField = () => {
-    appendContact('');
+    appendContact({ name: '', contacts: [] });
   };
 
   const removeContactField = (index: number) => {
