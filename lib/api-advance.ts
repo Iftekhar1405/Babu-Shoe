@@ -608,6 +608,11 @@ class ApiClient {
     return response.data;
   }
 
+  async getCustomerByContact(contact: string): Promise<Customer> {
+    const response = await this.request<Customer, false>(`/customers/contact?contact=${contact}`);
+    return response;
+  }
+
   async createCustomer(customerData: CreateCustomerDto): Promise<Customer> {
     const response = await this.request<Customer>("/customers", {
       method: "POST",
@@ -748,6 +753,25 @@ export const useCustomer = <TData = Customer>(
     ...options,
   });
 };
+
+export const useCustomerByContact = <TData = Customer>(
+  contact: string | undefined,
+  options?: Omit<
+    UseQueryOptions<Customer, ApiError, TData>,
+    "queryKey" | "queryFn"
+  >
+) => {
+  return useQuery({
+    queryKey: queryKeys.customer(contact || ""),
+    queryFn: () => apiClient.getCustomerByContact(contact || ""),
+    enabled: !!(contact?.length == 10),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: false,
+    ...options,
+  });
+};
+
 
 // Categories Queries
 export const useCategories = <TData = Category[]>(

@@ -1,6 +1,6 @@
 export interface Customer {
     _id: string;
-    name: string;
+    userId: { _id: string, name: string }
     contact?: string;
     phone?: string;
     email?: string;
@@ -8,6 +8,7 @@ export interface Customer {
     creditLimit?: number;
     createdAt?: string;
     updatedAt?: string;
+    address?: string;
 }
 
 export interface CreateCustomerDto {

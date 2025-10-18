@@ -20,7 +20,8 @@ import {
   useOptimisticBillUpdates,
   useUpdateBillItemMutation,
   useRemoveBillItemMutation,
-  useCreateOrderFromBill
+  useCreateOrderFromBill,
+  useCustomerByContact
 } from '@/lib/api-advance';
 import { useDebounce } from '@/hooks/use-debounce';
 import { handlePrintBillWithCustomerInfo } from './handlePrintBill';
@@ -49,6 +50,7 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
 
   // API hooks
   const { data: bill, isLoading, error, refetch } = useCurrentBill();
+  const { data: customer, isLoading: customerLoading } = useCustomerByContact(customerInfo?.phoneNumber)
   const clearBillMutation = useClearBill();
   const updateBillItemMutation = useUpdateBillItemMutation();
   const removeBillItemMutation = useRemoveBillItemMutation();
@@ -67,6 +69,18 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
       refetch();
     }
   }, [isOpen, refetch]);
+
+  useEffect(() => {
+
+    if (!customerLoading && customer) {
+      setCustomerInfo((prev) => ({
+        ...prev,
+        customerName: customer.userId?.name,
+        address: customer.address
+      }))
+    }
+
+  }, [customer, customerLoading])
 
   useEffect(() => {
     if (items.length > 0) {
@@ -622,18 +636,6 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
           </DialogHeader>
 
           <div className="space-y-3 sm:space-y-4 py-4">
-            <div>
-              <Label htmlFor="customerName" className="text-sm font-medium">
-                Customer Name *
-              </Label>
-              <Input
-                id="customerName"
-                value={customerInfo.customerName}
-                onChange={(e) => setCustomerInfo(prev => ({ ...prev, customerName: e.target.value }))}
-                placeholder="Enter customer name"
-                className="mt-1 text-sm sm:text-base"
-              />
-            </div>
 
             <div>
               <Label htmlFor="phoneNumber" className="text-sm font-medium">
@@ -644,6 +646,20 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
                 value={customerInfo.phoneNumber}
                 onChange={(e) => setCustomerInfo(prev => ({ ...prev, phoneNumber: e.target.value }))}
                 placeholder="Enter phone number"
+                className="mt-1 text-sm sm:text-base"
+              />
+            </div>
+
+
+            <div>
+              <Label htmlFor="customerName" className="text-sm font-medium">
+                Customer Name *
+              </Label>
+              <Input
+                id="customerName"
+                value={customerInfo.customerName}
+                onChange={(e) => setCustomerInfo(prev => ({ ...prev, customerName: e.target.value }))}
+                placeholder="Enter customer name"
                 className="mt-1 text-sm sm:text-base"
               />
             </div>
