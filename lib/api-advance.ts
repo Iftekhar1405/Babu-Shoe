@@ -592,14 +592,14 @@ class ApiClient {
   }
 
   // Customers
-  async getCustomers(filters?: CustomerFilters): Promise<PaginatedCustomerResponse> {
+  async getCustomers(filters?: CustomerFilters): Promise<Customer[]> {
     const params = new URLSearchParams();
     if (filters?.page) params.append("page", filters.page.toString());
     if (filters?.limit) params.append("limit", filters.limit.toString());
     if (filters?.search) params.append("search", filters.search);
 
     const endpoint = `/customers${params.toString() ? `?${params.toString()}` : ""}`;
-    const response = await this.request<PaginatedCustomerResponse, false>(endpoint);
+    const response = await this.request<Customer[], false>(endpoint);
     return response;
   }
 
@@ -721,10 +721,10 @@ export const useCustomerLedger = <TData = Transaction[]>(
 };
 
 // Customer Queries
-export const useCustomers = <TData = PaginatedCustomerResponse>(
+export const useCustomers = <TData = Customer[]>(
   filters?: CustomerFilters,
   options?: Omit<
-    UseQueryOptions<PaginatedCustomerResponse, ApiError, TData>,
+    UseQueryOptions<Customer[], ApiError, TData>,
     "queryKey" | "queryFn"
   >
 ) => {

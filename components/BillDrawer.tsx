@@ -46,7 +46,8 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
     address: '',
   });
   const [discountInputs, setDiscountInputs] = useState<Record<string, number>>({});
-  const debouncedDiscountInputs = useDebounce(discountInputs, 800);
+  const debouncedDiscountInputs = useDebounce(discountInputs, 500);
+
 
   // API hooks
   const { data: bill, isLoading, error, refetch } = useCurrentBill();
@@ -61,6 +62,7 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
   const total = bill?.totalAmount || 0;
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
+  const [paidAmount, setPaidAmount] = useState(total || 0)
   const [quantityInputs, setQuantityInputs] = useState<Record<string, number>>({});
   const debouncedQuantityInputs = useDebounce(quantityInputs, 800);
 
@@ -69,6 +71,12 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
       refetch();
     }
   }, [isOpen, refetch]);
+
+  useEffect(() => {
+    if (total) {
+      setPaidAmount(total);
+    }
+  }, [total]);
 
   useEffect(() => {
 
@@ -288,7 +296,9 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
         mode: ORDER_MODE[customerInfo.mode],
         paymentMode: ORDER_PAYMENT_MODE[customerInfo.paymentMode],
         address: customerInfo.address!,
-        phoneNumber: customerInfo.phoneNumber
+        phoneNumber: customerInfo.phoneNumber,
+        totalAmount: bill?.totalAmount || 0,
+        paidAmount,
       };
 
       const createdOrder = await createOrderMutation.mutateAsync(orderData);
@@ -363,7 +373,7 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 z-40 transition-opacity"
+        className="fixed inset-0 bg-black/50 z-40 transition-opacity w-full"
         onClick={onClose}
       />
 
@@ -627,113 +637,146 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
 
       {/* Customer Info Dialog - Single Modal for Both Actions */}
       <Dialog open={customerDialogOpen} onOpenChange={setCustomerDialogOpen}>
-        <DialogContent className="max-w-xs sm:max-w-md mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="w-full sm:max-w-3xl mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogHeader className="pb-2 border-b">
             <DialogTitle className="text-lg sm:text-xl font-bold flex items-center">
-              <User className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+              <User className="h-5 w-5 mr-2 text-gray-800" />
               Customer Information
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-3 sm:space-y-4 py-4">
-
-            <div>
-              <Label htmlFor="phoneNumber" className="text-sm font-medium">
-                Phone Number *
-              </Label>
-              <Input
-                id="phoneNumber"
-                value={customerInfo.phoneNumber}
-                onChange={(e) => setCustomerInfo(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                placeholder="Enter phone number"
-                className="mt-1 text-sm sm:text-base"
-              />
-            </div>
-
-
-            <div>
-              <Label htmlFor="customerName" className="text-sm font-medium">
-                Customer Name *
-              </Label>
-              <Input
-                id="customerName"
-                value={customerInfo.customerName}
-                onChange={(e) => setCustomerInfo(prev => ({ ...prev, customerName: e.target.value }))}
-                placeholder="Enter customer name"
-                className="mt-1 text-sm sm:text-base"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="address" className="text-sm font-medium">
-                Address <span className="text-gray-500 text-xs">(Required for orders)</span>
-              </Label>
-              <Textarea
-                id="address"
-                value={customerInfo.address}
-                onChange={(e) => setCustomerInfo(prev => ({ ...prev, address: e.target.value }))}
-                placeholder="Enter delivery address (optional for print only)"
-                className="mt-1 text-sm sm:text-base"
-                rows={3}
-              />
-            </div>
-
-            <div>
-              <Label className="text-sm font-medium">Order Mode</Label>
-              <Select
-                value={customerInfo.mode.toString()}
-                onValueChange={(value) => setCustomerInfo(prev => ({ ...prev, mode: parseInt(value) as ORDER_MODE }))}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select mode" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">Offline</SelectItem>
-                  <SelectItem value="1">Online</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label className="text-sm font-medium">Payment Mode</Label>
-              <Select
-                value={customerInfo.paymentMode.toString()}
-                onValueChange={(value) => setCustomerInfo(prev => ({ ...prev, paymentMode: parseInt(value) as ORDER_PAYMENT_MODE }))}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select payment method" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">UPI</SelectItem>
-                  <SelectItem value="1">Cash</SelectItem>
-                  <SelectItem value="2">Credit</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Bill Summary */}
-            <div className="bg-gray-50 p-3 rounded-lg border">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Total Items:</span>
-                <span className="font-medium">{totalItems}</span>
+          {/* Two Column Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-6">
+            {/* Form Section */}
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="phoneNumber">Phone Number *</Label>
+                <Input
+                  id="phoneNumber"
+                  value={customerInfo.phoneNumber}
+                  onChange={(e) =>
+                    setCustomerInfo((prev) => ({ ...prev, phoneNumber: e.target.value }))
+                  }
+                  placeholder="Enter phone number"
+                  className="mt-1"
+                />
               </div>
-              <div className="flex items-center justify-between text-lg font-bold mt-1">
-                <span>Total Amount:</span>
-                <span>₹{total.toFixed(2)}</span>
+
+              <div>
+                <Label htmlFor="customerName">Customer Name *</Label>
+                <Input
+                  id="customerName"
+                  value={customerInfo.customerName}
+                  onChange={(e) =>
+                    setCustomerInfo((prev) => ({ ...prev, customerName: e.target.value }))
+                  }
+                  placeholder="Enter customer name"
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="address">Address</Label>
+                <Textarea
+                  id="address"
+                  value={customerInfo.address}
+                  onChange={(e) =>
+                    setCustomerInfo((prev) => ({ ...prev, address: e.target.value }))
+                  }
+                  placeholder="Enter delivery address"
+                  rows={3}
+                  className="mt-1"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Order Mode</Label>
+                  <Select
+                    value={customerInfo.mode.toString()}
+                    onValueChange={(value) =>
+                      setCustomerInfo((prev) => ({
+                        ...prev,
+                        mode: parseInt(value) as ORDER_MODE,
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">Offline</SelectItem>
+                      <SelectItem value="1">Online</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Payment Mode</Label>
+                  <Select
+                    value={customerInfo.paymentMode.toString()}
+                    onValueChange={(value) =>
+                      setCustomerInfo((prev) => ({
+                        ...prev,
+                        paymentMode: parseInt(value) as ORDER_PAYMENT_MODE,
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select payment" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">UPI</SelectItem>
+                      <SelectItem value="1">Cash</SelectItem>
+                      <SelectItem value="2">Credit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Bill Summary Section */}
+            <div className="bg-gray-50 border rounded-xl p-5 space-y-4 h-fit">
+              <div>
+                <Label htmlFor="paidAmount">Paid Amount</Label>
+                <Input
+                  id="paidAmount"
+                  value={paidAmount}
+                  onChange={(e) =>
+                    setPaidAmount(parseFloat(e.target.value))
+                  }
+                  type='number'
+                  placeholder="Enter paid amount"
+                  className="mt-1"
+                />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-800">Bill Summary</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total Items:</span>
+                  <span className="font-medium">{totalItems}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total Due:</span>
+                  <span className="font-medium">₹{(total - paidAmount).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Subtotal:</span>
+                  <span className="font-medium">₹{total.toFixed(2)}</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <DialogFooter className="flex flex-col gap-2 sm:gap-3">
+          <DialogFooter className="flex flex-col sm:flex-row sm:justify-end gap-3 border-t pt-4">
             <Button
               onClick={handleCreateOrder}
-              className="w-full bg-black hover:bg-gray-800 text-white h-10 sm:h-11 text-sm sm:text-base"
+              className="w-full sm:w-auto bg-black hover:bg-gray-800 text-white h-10"
               disabled={createOrderMutation.isPending}
             >
               {createOrderMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Placing Order...
+                  Placing...
                 </>
               ) : (
                 <>
@@ -745,10 +788,10 @@ export function BillDrawer({ isOpen, onClose }: BillDrawerProps) {
             <Button
               variant="outline"
               onClick={handlePrintBill}
-              className="w-full border-gray-300 hover:bg-gray-50 h-10 sm:h-11 text-sm sm:text-base"
+              className="w-full sm:w-auto h-10"
             >
               <Printer className="h-4 w-4 mr-2" />
-              Print Bill Only
+              Print Only
             </Button>
           </DialogFooter>
         </DialogContent>

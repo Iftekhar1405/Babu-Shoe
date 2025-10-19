@@ -73,7 +73,7 @@ export default function TransactionPage() {
                             <CardContent>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div>
-                                        <h3 className="font-semibold text-lg">{selectedCustomer.name}</h3>
+                                        <h3 className="font-semibold text-lg">{selectedCustomer.userId.name}</h3>
                                         <div className="text-sm text-muted-foreground space-y-1">
                                             {selectedCustomer.phone && (
                                                 <p>Phone: {selectedCustomer.phone}</p>
