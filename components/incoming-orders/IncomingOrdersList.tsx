@@ -48,10 +48,10 @@ export default function IncomingOrdersList({ className }: IncomingOrdersListProp
               {error instanceof Error ? error.message : 'Failed to load incoming orders'}
             </p>
           </div>
-          <Button 
-            onClick={handleRefresh} 
-            variant="outline" 
-            size="sm" 
+          <Button
+            onClick={handleRefresh}
+            variant="outline"
+            size="sm"
             className="mt-3"
           >
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -74,9 +74,9 @@ export default function IncomingOrdersList({ className }: IncomingOrdersListProp
         </div>
         <div className="flex items-center gap-3">
           <IncomingOrderForm />
-          <Button 
-            onClick={handleRefresh} 
-            variant="outline" 
+          <Button
+            onClick={handleRefresh}
+            variant="outline"
             disabled={isLoading}
           >
             {isLoading ? (
@@ -105,8 +105,8 @@ export default function IncomingOrdersList({ className }: IncomingOrdersListProp
       ) : (
         <div className="grid gap-4">
           {orders.map((order) => (
-            <div 
-              key={order._id} 
+            <div
+              key={order._id}
               className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow p-6"
             >
               <div className="flex items-start justify-between">
@@ -116,22 +116,21 @@ export default function IncomingOrdersList({ className }: IncomingOrdersListProp
                       Order #{order._id?.slice(-8)}
                     </h3>
                     {order.matchPercentage !== undefined && (
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        order.matchPercentage >= 80 
-                          ? 'bg-green-100 text-green-800'
-                          : order.matchPercentage >= 50
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${order.matchPercentage >= 80
+                        ? 'bg-green-100 text-green-800'
+                        : order.matchPercentage >= 50
                           ? 'bg-yellow-100 text-yellow-800'
                           : 'bg-red-100 text-red-800'
-                      }`}>
+                        }`}>
                         {order.matchPercentage}% matched
                       </span>
                     )}
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-500">Vendor ID:</span>
-                      <div className="font-medium text-gray-900">{order.vendorId}</div>
+                      <span className="text-gray-500">Vendor:</span>
+                      <div className="font-medium text-gray-900">{order.vendorId.name}</div>
                     </div>
                     <div>
                       <span className="text-gray-500">Products:</span>
@@ -169,9 +168,9 @@ export default function IncomingOrdersList({ className }: IncomingOrdersListProp
                       Details
                     </Button>
                   </Link>
-                  <Button 
-                    size="sm" 
-                    variant="destructive" 
+                  <Button
+                    size="sm"
+                    variant="destructive"
                     onClick={() => handleDeleteOrder(order._id!)}
                     disabled={deleteOrderMutation.isPending}
                   >

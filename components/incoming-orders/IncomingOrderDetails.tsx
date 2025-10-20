@@ -5,19 +5,19 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { IncomingOrderComment } from '@/types';
-import { 
-  useIncomingOrder, 
-  useUpdateIncomingOrder, 
-  useAddIncomingOrderComment 
+import {
+  useIncomingOrder,
+  useUpdateIncomingOrder,
+  useAddIncomingOrderComment
 } from '@/lib/api-advance';
-import { 
-  ArrowLeft, 
-  RefreshCw, 
-  Loader2, 
-  MessageSquare, 
-  User, 
-  Package, 
-  AlertCircle 
+import {
+  ArrowLeft,
+  RefreshCw,
+  Loader2,
+  MessageSquare,
+  User,
+  Package,
+  AlertCircle
 } from 'lucide-react';
 
 interface IncomingOrderDetailsProps {
@@ -92,10 +92,10 @@ export default function IncomingOrderDetails({ id }: IncomingOrderDetailsProps) 
 
   const calculateMatchPercentage = () => {
     if (!order?.productDetails.length) return 0;
-    
+
     const totalQuantity = order.productDetails.reduce((sum, product) => sum + product.quantity, 0);
     const totalMatched = order.productDetails.reduce((sum, product) => sum + product.matchedQuantity, 0);
-    
+
     return totalQuantity > 0 ? Math.round((totalMatched / totalQuantity) * 100) : 0;
   };
 
@@ -158,17 +158,16 @@ export default function IncomingOrderDetails({ id }: IncomingOrderDetailsProps) 
             <h1 className="text-2xl font-semibold text-gray-900">
               Incoming Order #{order._id?.slice(-8)}
             </h1>
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-              calculatedMatchPercentage >= 80 
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${calculatedMatchPercentage >= 80
                 ? 'bg-green-100 text-green-800'
                 : calculatedMatchPercentage >= 50
-                ? 'bg-yellow-100 text-yellow-800'
-                : 'bg-red-100 text-red-800'
-            }`}>
+                  ? 'bg-yellow-100 text-yellow-800'
+                  : 'bg-red-100 text-red-800'
+              }`}>
               {calculatedMatchPercentage}% matched
             </span>
           </div>
-          <p className="text-gray-600">Vendor: {order.vendorId}</p>
+          <p className="text-gray-600">Vendor: {order.vendorId.name}</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => router.back()} variant="outline">
@@ -187,11 +186,11 @@ export default function IncomingOrderDetails({ id }: IncomingOrderDetailsProps) 
           <div className="flex items-center">
             <AlertCircle className="h-4 w-4 text-red-500 mr-2" />
             <p className="text-red-800 text-sm">
-              {updateOrderMutation.error instanceof Error 
-                ? updateOrderMutation.error.message 
+              {updateOrderMutation.error instanceof Error
+                ? updateOrderMutation.error.message
                 : addCommentMutation.error instanceof Error
-                ? addCommentMutation.error.message
-                : 'An error occurred'}
+                  ? addCommentMutation.error.message
+                  : 'An error occurred'}
             </p>
           </div>
         </div>
@@ -204,7 +203,7 @@ export default function IncomingOrderDetails({ id }: IncomingOrderDetailsProps) 
             <Package className="h-5 w-5 mr-2" />
             Product Details
           </h2>
-          
+
           <div className="space-y-4">
             {order.productDetails.map((product, index) => (
               <div key={index} className="border border-gray-200 rounded-lg p-4">
@@ -287,8 +286,8 @@ export default function IncomingOrderDetails({ id }: IncomingOrderDetailsProps) 
               <Input
                 type="datetime-local"
                 value={order.matchedAt ? new Date(order.matchedAt).toISOString().slice(0, 16) : ''}
-                onChange={(e) => updateOrderMetadata({ 
-                  matchedAt: e.target.value ? new Date(e.target.value).toISOString() : undefined 
+                onChange={(e) => updateOrderMetadata({
+                  matchedAt: e.target.value ? new Date(e.target.value).toISOString() : undefined
                 })}
                 disabled={updateOrderMutation.isPending}
               />
@@ -303,8 +302,8 @@ export default function IncomingOrderDetails({ id }: IncomingOrderDetailsProps) 
                 min={0}
                 max={100}
                 value={order.matchPercentage || calculatedMatchPercentage}
-                onChange={(e) => updateOrderMetadata({ 
-                  matchPercentage: e.target.value ? Number(e.target.value) : undefined 
+                onChange={(e) => updateOrderMetadata({
+                  matchPercentage: e.target.value ? Number(e.target.value) : undefined
                 })}
                 disabled={updateOrderMutation.isPending}
               />
@@ -372,8 +371,8 @@ export default function IncomingOrderDetails({ id }: IncomingOrderDetailsProps) 
             }}
             disabled={addCommentMutation.isPending}
           />
-          <Button 
-            onClick={handleAddComment} 
+          <Button
+            onClick={handleAddComment}
             disabled={!commentText.trim() || addCommentMutation.isPending}
           >
             {addCommentMutation.isPending ? (

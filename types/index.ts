@@ -273,7 +273,7 @@ export interface IncomingOrderComment {
 
 export interface IncomingOrder<e extends boolean = true> {
   _id?: string;
-  vendorId: string;
+  vendorId: { _id: string, name: string, logo: string };
   productDetails: IncomingOrderProductDetail[];
   matchedBy?: e extends true ? User : string;
   matchedAt?: Date | string;
