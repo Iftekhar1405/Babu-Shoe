@@ -75,14 +75,11 @@ export default function TransactionPage() {
                                     <div>
                                         <h3 className="font-semibold text-lg">{selectedCustomer.userId.name}</h3>
                                         <div className="text-sm text-muted-foreground space-y-1">
-                                            {selectedCustomer.phone && (
-                                                <p>Phone: {selectedCustomer.phone}</p>
+                                            {selectedCustomer.contact && (
+                                                <p>Phone: {selectedCustomer.contact}</p>
                                             )}
                                             {selectedCustomer.contact && (
                                                 <p>Contact: {selectedCustomer.contact}</p>
-                                            )}
-                                            {selectedCustomer.email && (
-                                                <p>Email: {selectedCustomer.email}</p>
                                             )}
                                         </div>
                                     </div>

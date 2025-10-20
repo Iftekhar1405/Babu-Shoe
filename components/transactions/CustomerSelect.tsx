@@ -37,7 +37,7 @@ export function CustomerSelect({ value, onChange, placeholder = "Select customer
             <SelectContent>
                 {customersResponse.map((customer) => (
                     <SelectItem key={customer._id} value={customer._id}>
-                        {customer.userId.name} — {customer.phone || customer.contact || '—'}
+                        {customer.userId.name} — {customer.contact || '—'}
                     </SelectItem>
                 ))}
             </SelectContent>

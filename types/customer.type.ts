@@ -1,14 +1,25 @@
 export interface Customer {
     _id: string;
-    userId: { _id: string, name: string }
-    contact?: string;
-    phone?: string;
-    email?: string;
-    currentBalance?: number;
-    creditLimit?: number;
-    createdAt?: string;
-    updatedAt?: string;
-    address?: string;
+    userId: {
+        _id: string;
+        name: string;
+        phoneNumber: string;
+        role: string;
+        isActive: boolean;
+        createdAt: string;
+        updatedAt: string;
+        password?: string;
+        __v?: number;
+    };
+    contact: string;
+    creditLimit: number;
+    creditBalance: number;
+    currentBalance: number;
+    address: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+    __v?: number;
 }
 
 export interface CreateCustomerDto {
