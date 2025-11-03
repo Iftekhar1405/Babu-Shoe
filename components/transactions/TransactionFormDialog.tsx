@@ -78,7 +78,7 @@ export function TransactionFormDialog({ customer, trigger }: TransactionFormDial
             </DialogTrigger>
             <DialogContent className="max-w-lg">
                 <DialogHeader>
-                    <DialogTitle>Create Transaction for {customer?.name}</DialogTitle>
+                    <DialogTitle>Create Transaction for {customer?.userId?.name}</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
