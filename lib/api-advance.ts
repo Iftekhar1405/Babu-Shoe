@@ -519,8 +519,8 @@ class ApiClient {
   }
 
   async getIncomingOrderById(id: string): Promise<IncomingOrder> {
-    const response = await this.request<IncomingOrder>(`/incoming-orders/${id}`);
-    return response.data;
+    const response = await this.request<IncomingOrder, false>(`/incoming-orders/${id}`);
+    return response;
   }
 
   async createIncomingOrder(orderData: CreateIncomingOrderDto): Promise<IncomingOrder> {

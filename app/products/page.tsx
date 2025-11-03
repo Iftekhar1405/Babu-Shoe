@@ -105,7 +105,7 @@ function ProductsPage() {
 
   const getCategoryName = (id: string) => {
     if (!categories) return 'Unknown Category';
-    const category = categories.find(cat => cat._id === id);
+    const category = categories.find(cat => cat?._id === id);
     return category ? category.name : 'Unknown Category';
   };
 
@@ -237,7 +237,7 @@ function ProductsPage() {
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
                     {categories?.length && categories.map((category) => (
-                      <SelectItem key={category._id} value={category._id || ''}>
+                      <SelectItem key={category?._id} value={category?._id || ''}>
                         {category.name}
                       </SelectItem>
                     ))}
@@ -356,7 +356,7 @@ function ProductsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6">
             {filteredProducts.map((product) => (
               <ProductCard
-                key={product._id}
+                key={product?._id}
                 product={product}
                 showAddToBill={isAuthenticated}
               />
