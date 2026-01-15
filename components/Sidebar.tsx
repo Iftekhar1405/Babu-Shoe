@@ -61,7 +61,7 @@ const navigation = [
     public: true,
   },
   {
-    name: 'Companies',
+    name: 'Companies', //heyyy
     href: '/companies',
     icon: Factory,
     public: false,
